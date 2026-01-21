@@ -14,7 +14,7 @@ trigger:
       - develop
   paths:
     include:
-      - ${{ parameters.projectname }}/**
+      - devsu-demo-devops-python/**
 pr:
   branches:
     include:
