@@ -193,7 +193,7 @@ stages:
             condition: and(succeededOrFailed(), eq(${{ parameters.runSecurityScans }}, true))
           
           # Publicar artefactos de análisis
-          - task: PublishBuildArtifacts@2
+          - task: PublishBuildArtifacts@1
             displayName: '📤 Publish Analysis Reports'
             inputs:
               pathToPublish: '$(Build.ArtifactStagingDirectory)/reports'
