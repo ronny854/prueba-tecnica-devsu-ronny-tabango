@@ -158,8 +158,8 @@ stages:
           or(
             eq(variables['Build.SourceBranch'], 'refs/heads/main'),
             eq(variables['Build.SourceBranch'], 'refs/heads/develop')
+            )
           )
-        )
         pool:
           vmImage: 'ubuntu-latest'
         
