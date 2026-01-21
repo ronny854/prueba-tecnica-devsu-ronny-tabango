@@ -144,42 +144,9 @@ stages:
             inputs:
               summaryFileLocation: '$(Build.ArtifactStagingDirectory)/reports/coverage.xml'
               pathToSources: '${{ parameters.workingDirectory }}'
-          
-          # ==========================================
-          # PASO 5 (OPCIONAL): SONARCLOUD ANALYSIS
-          # ==========================================
-          # SonarCloud - Preparar análisis
-          - ${{ if eq(parameters.runSonarAnalysis, true) }}:
-            - task: SonarCloudPrepare@3
-              displayName: '🔍 SonarCloud - Prepare Analysis'
-              inputs:
-                SonarCloud: '${{ parameters.sonarServiceConnection }}'
-                organization: '${{ parameters.sonarOrganization }}'
-                scannerMode: 'CLI'
-                configMode: 'manual'
-                cliProjectKey: '${{ parameters.sonarOrganization }}_${{ parameters.sonarProjectName }}'
-                cliProjectName: '${{ parameters.sonarProjectName }}'
-                cliSources: '${{ parameters.workingDirectory }}'
-                extraProperties: |
-                  sonar.python.coverage.reportPaths=$(Build.ArtifactStagingDirectory)/reports/coverage.xml
-                  sonar.python.version=3.11
-                  sonar.sources=${{ parameters.workingDirectory }}
-                  sonar.exclusions=**/migrations/**,**/tests/**,**/__pycache__/**,**/htmlcov/**
-                  sonar.tests=${{ parameters.workingDirectory }}
-                  sonar.test.inclusions=**/tests/**,**/test_*.py
-            
-            # SonarCloud - Ejecutar análisis
-            - task: SonarCloudAnalyze@3
-              displayName: '🔍 SonarCloud - Run Analysis'
-            
-            # SonarCloud - Publicar Quality Gate
-            - task: SonarCloudPublish@3
-              displayName: '🔍 SonarCloud - Publish Quality Gate'
-              inputs:
-                pollingTimeoutSec: '300'
 
           # ==========================================
-          # PASO 6 (OPCIONAL): VULNERABILITY SCAN
+          # PASO 5 (OPCIONAL): VULNERABILITY SCAN
           # ==========================================
           - script: |
               set -euo pipefail
@@ -201,11 +168,67 @@ stages:
             condition: always()
 
       # ==========================================
-      # JOB 2: DOCKER BUILD & PUSH
+      # JOB 2: SONARCLOUD ANALYSIS (requiere Java)
+      # ==========================================
+      - ${{ if eq(parameters.runSonarAnalysis, true) }}:
+        - job: SonarCloudAnalysis
+          displayName: 'SonarCloud Analysis'
+          dependsOn: BuildAndTest
+          condition: succeeded()
+          pool:
+            vmImage: 'ubuntu-latest'
+          # NO usar container - ubuntu-latest ya tiene Java
+          steps:
+            - checkout: self
+              fetchDepth: 0
+            
+            # Descargar artefactos de coverage del job anterior
+            - task: DownloadBuildArtifacts@1
+              displayName: '📥 Download Coverage Reports'
+              inputs:
+                buildType: 'current'
+                downloadType: 'single'
+                artifactName: 'analysis-reports'
+                downloadPath: '$(Build.ArtifactStagingDirectory)'
+            
+            # SonarCloud - Preparar análisis
+            - task: SonarCloudPrepare@3
+              displayName: '🔍 SonarCloud - Prepare Analysis'
+              inputs:
+                SonarCloud: '${{ parameters.sonarServiceConnection }}'
+                organization: '${{ parameters.sonarOrganization }}'
+                scannerMode: 'CLI'
+                configMode: 'manual'
+                cliProjectKey: '${{ parameters.sonarOrganization }}_${{ parameters.sonarProjectName }}'
+                cliProjectName: '${{ parameters.sonarProjectName }}'
+                cliSources: '${{ parameters.workingDirectory }}'
+                extraProperties: |
+                  sonar.python.coverage.reportPaths=$(Build.ArtifactStagingDirectory)/analysis-reports/coverage.xml
+                  sonar.python.version=3.11
+                  sonar.sources=${{ parameters.workingDirectory }}
+                  sonar.exclusions=**/migrations/**,**/tests/**,**/__pycache__/**,**/htmlcov/**
+                  sonar.tests=${{ parameters.workingDirectory }}
+                  sonar.test.inclusions=**/tests/**,**/test_*.py
+            
+            # SonarCloud - Ejecutar análisis
+            - task: SonarCloudAnalyze@3
+              displayName: '🔍 SonarCloud - Run Analysis'
+            
+            # SonarCloud - Publicar Quality Gate
+            - task: SonarCloudPublish@3
+              displayName: '🔍 SonarCloud - Publish Quality Gate'
+              inputs:
+                pollingTimeoutSec: '300'
+
+      # ==========================================
+      # JOB 3: DOCKER BUILD & PUSH
       # ==========================================
       - job: DockerBuildPush
         displayName: 'Build & Push Docker Image'
-        dependsOn: BuildAndTest
+        dependsOn: 
+          - BuildAndTest
+          - ${{ if eq(parameters.runSonarAnalysis, true) }}:
+            - SonarCloudAnalysis
         # No construir/pushear en Pull Requests; solo en ramas main/develop.
         condition: and(
           succeeded(),
