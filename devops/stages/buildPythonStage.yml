@@ -139,7 +139,7 @@ stages:
           #     DATABASE_NAME: 'db.sqlite3'
           
           # Publicar resultados de Coverage
-          - task: PublishCodeCoverageResults@1
+          - task: PublishCodeCoverageResults@2
             displayName: '📊 Publish Coverage Results'
             inputs:
               summaryFileLocation: '$(Build.ArtifactStagingDirectory)/reports/coverage.xml'
@@ -193,7 +193,7 @@ stages:
             condition: and(succeededOrFailed(), eq(${{ parameters.runSecurityScans }}, true))
           
           # Publicar artefactos de análisis
-          - task: PublishBuildArtifacts@1
+          - task: PublishBuildArtifacts@2
             displayName: '📤 Publish Analysis Reports'
             inputs:
               pathToPublish: '$(Build.ArtifactStagingDirectory)/reports'
