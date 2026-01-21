@@ -43,11 +43,6 @@ parameters:
     default: 'conection-sonarqube-github-account'
     displayName: 'Service Connection de SonarCloud/SonarQube'
   
-  - name: sonarProjectKey
-    type: string
-    default: ''
-    displayName: 'Project Key en SonarCloud/SonarQube'
-  
   - name: sonarProjectName
     type: string
     default: ''
@@ -162,7 +157,7 @@ stages:
                 organization: '${{ parameters.sonarOrganization }}'
                 scannerMode: 'CLI'
                 configMode: 'manual'
-                cliProjectKey: 'ronny854_${{ parameters.sonarProjectName }}'
+                cliProjectKey: '${{ parameters.sonarOrganization }}_${{ parameters.sonarProjectName }}'
                 cliProjectName: '${{ parameters.sonarProjectName }}'
                 cliSources: '${{ parameters.workingDirectory }}'
                 extraProperties: |

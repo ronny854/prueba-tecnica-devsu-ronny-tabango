@@ -61,6 +61,5 @@ stages:
     # SonarCloud parameters
     runSonarAnalysis: ${{ parameters.runSonarAnalysis }}
     sonarServiceConnection: '$(sonarServiceConnection)'
-    sonarProjectKey: '${{ parameters.sonarProjectKey }}'
     sonarProjectName: '${{ parameters.projectname }}'
     sonarOrganization: '${{ parameters.sonarOrganization }}'
