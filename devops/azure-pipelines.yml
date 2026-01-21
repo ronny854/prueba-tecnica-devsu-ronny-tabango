@@ -38,7 +38,6 @@ stages:
     tag: '$(Build.BuildId)'
     workingDirectory: '$(workingDirectory)'
     dockerfilePath: '$(dockerfilePath)'
-    dockerBuildContext: '$(workingDirectory)'
     dockerRegistryServiceConnection: '$(dockerRegistryServiceConnection)'
     containerRegistry: '$(containerRegistry)'
     buildImage: '$(buildImage)'

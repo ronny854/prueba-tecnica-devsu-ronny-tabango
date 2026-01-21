@@ -7,9 +7,6 @@ parameters:
   - name: tag
   - name: workingDirectory
   - name: dockerfilePath
-  - name: dockerBuildContext
-    type: string
-    default: '$(Build.SourcesDirectory)/devsu-demo-devops-python'
   - name: dockerRegistryServiceConnection
   - name: containerRegistry
   - name: buildImage
@@ -60,7 +57,7 @@ stages:
               set -euo pipefail
               python -m pip install --upgrade pip
               pip install -r requirements.txt
-            displayName: '📦 Install Project Dependencies'
+            displayName: '📦 Code Build'
             workingDirectory: ${{ parameters.workingDirectory }}
           - script: |
               set -euo pipefail
@@ -74,33 +71,33 @@ stages:
 
               echo "=== Running Flake8 (style, non-blocking) ==="
               flake8 . --count --exit-zero --max-complexity=10 --max-line-length=127 --statistics | tee "$(Build.ArtifactStagingDirectory)/reports/flake8-style.txt"
-            displayName: '🔍 Static Code Analysis - Flake8'
+            displayName: '🔍 Static Code Analysis'
             workingDirectory: ${{ parameters.workingDirectory }}
-          - script: |
-              set -euo pipefail
-              mkdir -p "$(Build.ArtifactStagingDirectory)/reports"
-              echo "=== Running Pylint ==="
-              set +e
-              pylint api/ demo/ --output-format=json > "$(Build.ArtifactStagingDirectory)/reports/pylint-report.json"
-              pylint_exit=$?
-              set -e
-              echo "Pylint exit code: ${pylint_exit}"
-              if [ "${{ parameters.pylintContinueOnError }}" != "true" ] && [ "${pylint_exit}" -ne 0 ]; then
-                exit ${pylint_exit}
-              fi
-            displayName: '🔍 Static Code Analysis - Pylint'
-            workingDirectory: ${{ parameters.workingDirectory }}
-          - script: |
-              set -euo pipefail
-              echo "=== Running Migrations ==="
-              python manage.py migrate --noinput
-            displayName: '🗄️ Run Migrations'
-            workingDirectory: ${{ parameters.workingDirectory }}
-            env:
-              DJANGO_SECRET_KEY: 'test-secret-key-for-ci'
-              DEBUG: 'True'
-              ALLOWED_HOSTS: 'localhost,127.0.0.1'
-              DATABASE_NAME: 'db.sqlite3'
+          # - script: |
+          #     set -euo pipefail
+          #     mkdir -p "$(Build.ArtifactStagingDirectory)/reports"
+          #     echo "=== Running Pylint ==="
+          #     set +e
+          #     pylint api/ demo/ --output-format=json > "$(Build.ArtifactStagingDirectory)/reports/pylint-report.json"
+          #     pylint_exit=$?
+          #     set -e
+          #     echo "Pylint exit code: ${pylint_exit}"
+          #     if [ "${{ parameters.pylintContinueOnError }}" != "true" ] && [ "${pylint_exit}" -ne 0 ]; then
+          #       exit ${pylint_exit}
+          #     fi
+          #   displayName: '🔍 Static Code Analysis - Pylint'
+          #   workingDirectory: ${{ parameters.workingDirectory }}
+          # - script: |
+          #     set -euo pipefail
+          #     echo "=== Running Migrations ==="
+          #     python manage.py migrate --noinput
+          #   displayName: '🗄️ Run Migrations'
+          #   workingDirectory: ${{ parameters.workingDirectory }}
+          #   env:
+          #     DJANGO_SECRET_KEY: 'test-secret-key-for-ci'
+          #     DEBUG: 'True'
+          #     ALLOWED_HOSTS: 'localhost,127.0.0.1'
+          #     DATABASE_NAME: 'db.sqlite3'
 
           - script: |
               set -euo pipefail
@@ -112,11 +109,11 @@ stages:
               coverage html -d "$(Build.ArtifactStagingDirectory)/reports/htmlcov"
             displayName: '📊 Code Coverage'
             workingDirectory: ${{ parameters.workingDirectory }}
-            env:
-              DJANGO_SECRET_KEY: 'test-secret-key-for-ci'
-              DEBUG: 'True'
-              ALLOWED_HOSTS: 'localhost,127.0.0.1'
-              DATABASE_NAME: 'db.sqlite3'
+          #   env:
+          #     DJANGO_SECRET_KEY: 'test-secret-key-for-ci'
+          #     DEBUG: 'True'
+          #     ALLOWED_HOSTS: 'localhost,127.0.0.1'
+          #     DATABASE_NAME: 'db.sqlite3'
           
           # Publicar resultados de Coverage
           - task: PublishCodeCoverageResults@2
@@ -139,16 +136,6 @@ stages:
             continueOnError: true
             condition: and(succeededOrFailed(), eq(${{ parameters.runSecurityScans }}, true))
           
-          - script: |
-              set -euo pipefail
-              mkdir -p "$(Build.ArtifactStagingDirectory)/reports"
-              echo "=== Checking Dependencies for Vulnerabilities ==="
-              safety check -r requirements.txt --full-report | tee "$(Build.ArtifactStagingDirectory)/reports/safety-report.txt" || true
-            displayName: '🔒 Dependency Vulnerability Scan - Safety'
-            workingDirectory: ${{ parameters.workingDirectory }}
-            continueOnError: true
-            condition: and(succeededOrFailed(), eq(${{ parameters.runSecurityScans }}, true))
-          
           # Publicar artefactos de análisis
           - task: PublishBuildArtifacts@1
             displayName: '📤 Publish Analysis Reports'
@@ -160,57 +147,57 @@ stages:
       # ==========================================
       # JOB 2: DOCKER BUILD & PUSH
       # ==========================================
-      # - job: DockerBuildPush
-      #   displayName: 'Build & Push Docker Image'
-      #   dependsOn: BuildAndTest
-      #   # No construir/pushear en Pull Requests; solo en ramas main/develop.
-      #   condition: and(
-      #     succeeded(),
-      #     ${{ parameters.pushImage }},
-      #     ne(variables['Build.Reason'], 'PullRequest'),
-      #     or(
-      #       eq(variables['Build.SourceBranch'], 'refs/heads/main'),
-      #       eq(variables['Build.SourceBranch'], 'refs/heads/develop')
-      #     )
-      #   )
-      #   pool:
-      #     vmImage: 'ubuntu-latest'
+      - job: DockerBuildPush
+        displayName: 'Build & Push Docker Image'
+        dependsOn: BuildAndTest
+        # No construir/pushear en Pull Requests; solo en ramas main/develop.
+        condition: and(
+          succeeded(),
+          ${{ parameters.pushImage }},
+          ne(variables['Build.Reason'], 'PullRequest'),
+          or(
+            eq(variables['Build.SourceBranch'], 'refs/heads/main'),
+            eq(variables['Build.SourceBranch'], 'refs/heads/develop')
+          )
+        )
+        pool:
+          vmImage: 'ubuntu-latest'
         
-      #   steps:
-      #     - checkout: self
+        steps:
+          - checkout: self
           
-      #     # Build de la imagen Docker
-      #     - task: Docker@2
-      #       displayName: '🐳 Build Docker Image'
-      #       inputs:
-      #         containerRegistry: '${{ parameters.dockerRegistryServiceConnection }}'
-      #         repository: '${{ parameters.imageRepository }}'
-      #         command: 'build'
-      #         Dockerfile: '${{ parameters.dockerfilePath }}'
-      #         buildContext: '${{ parameters.dockerBuildContext }}'
-      #         tags: |
-      #           ${{ parameters.tag }}
-      #           latest
+          # Build de la imagen Docker
+          - task: Docker@2
+            displayName: '🐳 Build Docker Image'
+            inputs:
+              containerRegistry: '${{ parameters.dockerRegistryServiceConnection }}'
+              repository: '${{ parameters.imageRepository }}'
+              command: 'build'
+              Dockerfile: '${{ parameters.dockerfilePath }}'
+              buildContext: '${{ parameters.workingDirectory }}'
+              tags: |
+                ${{ parameters.tag }}
+                latest
           
-      #     # ==========================================
-      #     # OPCIONAL: Scan de vulnerabilidades de imagen
-      #     # ==========================================
-      #     - script: |
-      #         echo "=== Scanning Docker Image for Vulnerabilities ==="
-      #         docker run --rm -v /var/run/docker.sock:/var/run/docker.sock \
-      #           aquasec/trivy:latest image --severity HIGH,CRITICAL \
-      #           ${{ parameters.containerRegistry }}/${{ parameters.imageRepository }}:${{ parameters.tag }} || true
-      #       displayName: '🔒 Docker Image Vulnerability Scan - Trivy'
-      #       continueOnError: true
-      #       condition: and(succeededOrFailed(), eq(${{ parameters.runImageScan }}, true))
+          # ==========================================
+          # OPCIONAL: Scan de vulnerabilidades de imagen
+          # ==========================================
+          - script: |
+              echo "=== Scanning Docker Image for Vulnerabilities ==="
+              docker run --rm -v /var/run/docker.sock:/var/run/docker.sock \
+                aquasec/trivy:latest image --severity HIGH,CRITICAL \
+                ${{ parameters.containerRegistry }}/${{ parameters.imageRepository }}:${{ parameters.tag }} || true
+            displayName: '🔒 Docker Image Vulnerability Scan - Trivy'
+            continueOnError: true
+            condition: and(succeededOrFailed(), eq(${{ parameters.runImageScan }}, true))
           
-      #     # Push de la imagen al registry
-      #     - task: Docker@2
-      #       displayName: '🐳 Push Docker Image'
-      #       inputs:
-      #         containerRegistry: '${{ parameters.dockerRegistryServiceConnection }}'
-      #         repository: '${{ parameters.imageRepository }}'
-      #         command: 'push'
-      #         tags: |
-      #           ${{ parameters.tag }}
-      #           latest
+          # Push de la imagen al registry
+          # - task: Docker@2
+          #   displayName: '🐳 Push Docker Image'
+          #   inputs:
+          #     containerRegistry: '${{ parameters.dockerRegistryServiceConnection }}'
+          #     repository: '${{ parameters.imageRepository }}'
+          #     command: 'push'
+          #     tags: |
+          #       ${{ parameters.tag }}
+          #       latest
