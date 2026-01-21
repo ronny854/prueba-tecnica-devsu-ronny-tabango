@@ -14,11 +14,11 @@ parameters:
   - name: runSonarAnalysis
     type: boolean
     default: true
+    displayName: 'Ejecutar análisis de SonarCloud'
   - name: sonarProjectName
     type: string
     default: 'prueba-tecnica-devsu-ronny-tabango'
     displayName: 'Nombre del proyecto en SonarCloud'
-    displayName: 'Ejecutar análisis de SonarCloud'
   - name: sonarOrganization
     type: string
     default: 'ronny854'
