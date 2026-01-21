@@ -1,0 +1,175 @@
+parameters:
+  - name: pythonVersion
+    type: string
+    default: '3.11'
+  - name: workingDirectory
+    type: string
+    default: '$(Build.SourcesDirectory)/devsu-demo-devops-python'
+  - name: dockerRegistryServiceConnection
+    type: string
+    default: 'docker-hub-connection'
+  - name: imageRepository
+    type: string
+    default: 'demo-devops-python'
+  - name: containerRegistry
+    type: string
+    default: 'docker.io/your-username'
+  - name: dockerfilePath
+    type: string
+    default: '$(Build.SourcesDirectory)/devsu-demo-devops-python/Dockerfile'
+  - name: tag
+    type: string
+    default: '$(Build.BuildId)'
+  - name: buildImage
+    type: string
+    default: 'ronnyt854/python311_build:v1.1'
+
+stages:
+  - stage: Build
+    displayName: 'Build & Test'
+    jobs:
+      - job: BuildAndTest
+        displayName: 'Build, Test & Analyze'
+        pool:
+          vmImage: 'ubuntu-latest'
+        container:
+          image: ${{ parameters.buildImage }}
+        steps:
+          - checkout: self
+            fetchDepth: 0
+          - script: |
+              python -m pip install --upgrade pip
+              pip install -r requirements.txt
+            displayName: '📦 Install Project Dependencies'
+            workingDirectory: ${{ parameters.workingDirectory }}
+          - script: |
+              echo "=== Running Flake8 (PEP8 Style Guide) ==="
+              flake8 . --count --select=E9,F63,F7,F82 --show-source --statistics || true
+              flake8 . --count --exit-zero --max-complexity=10 --max-line-length=127 --statistics
+            displayName: '🔍 Static Code Analysis - Flake8'
+            workingDirectory: ${{ parameters.workingDirectory }}
+            continueOnError: true
+          - script: |
+              echo "=== Running Pylint ==="
+              pylint --exit-zero --output-format=json:pylint-report.json,colorized api/ demo/ || true
+            displayName: '🔍 Static Code Analysis - Pylint'
+            workingDirectory: ${{ parameters.workingDirectory }}
+            continueOnError: true
+          - script: |
+              echo "=== Running Migrations ==="
+              python manage.py migrate --noinput
+            displayName: '🗄️ Run Migrations'
+            workingDirectory: ${{ parameters.workingDirectory }}
+            env:
+              DJANGO_SECRET_KEY: 'test-secret-key-for-ci'
+              DEBUG: 'True'
+              ALLOWED_HOSTS: 'localhost,127.0.0.1'
+              DATABASE_NAME: 'db.sqlite3'
+          - script: |
+              echo "=== Running Unit Tests ==="
+              python manage.py test --verbosity=2
+            displayName: '🧪 Run Unit Tests'
+            workingDirectory: ${{ parameters.workingDirectory }}
+            env:
+              DJANGO_SECRET_KEY: 'test-secret-key-for-ci'
+              DEBUG: 'True'
+              ALLOWED_HOSTS: 'localhost,127.0.0.1'
+              DATABASE_NAME: 'db.sqlite3'
+          
+          # ==========================================
+          # PASO 4: CODE COVERAGE
+          # ==========================================
+          - script: |
+              echo "=== Running Tests with Coverage ==="
+              coverage run --source='.' manage.py test
+              coverage report -m
+              coverage xml -o coverage.xml
+              coverage html -d htmlcov
+            displayName: '📊 Code Coverage'
+            workingDirectory: ${{ parameters.workingDirectory }}
+            env:
+              DJANGO_SECRET_KEY: 'test-secret-key-for-ci'
+              DEBUG: 'True'
+              ALLOWED_HOSTS: 'localhost,127.0.0.1'
+              DATABASE_NAME: 'db.sqlite3'
+          
+          # Publicar resultados de Coverage
+          - task: PublishCodeCoverageResults@2
+            displayName: '📊 Publish Coverage Results'
+            inputs:
+              summaryFileLocation: '${{ parameters.workingDirectory }}/coverage.xml'
+              pathToSources: '${{ parameters.workingDirectory }}'
+          
+          # ==========================================
+          # PASO 5 (OPCIONAL): VULNERABILITY SCAN
+          # ==========================================
+          - script: |
+              echo "=== Running Bandit (Security Linter) ==="
+              bandit -r api/ demo/ -f json -o bandit-report.json || true
+              bandit -r api/ demo/ -f txt || true
+            displayName: '🔒 Security Scan - Bandit'
+            workingDirectory: ${{ parameters.workingDirectory }}
+            continueOnError: true
+          
+          - script: |
+              echo "=== Checking Dependencies for Vulnerabilities ==="
+              safety check -r requirements.txt --full-report || true
+            displayName: '🔒 Dependency Vulnerability Scan - Safety'
+            workingDirectory: ${{ parameters.workingDirectory }}
+            continueOnError: true
+          
+          # Publicar artefactos de análisis
+          - task: PublishBuildArtifacts@1
+            displayName: '📤 Publish Analysis Reports'
+            inputs:
+              pathToPublish: '${{ parameters.workingDirectory }}'
+              artifactName: 'analysis-reports'
+            condition: always()
+
+      # ==========================================
+      # JOB 2: DOCKER BUILD & PUSH
+      # ==========================================
+      - job: DockerBuildPush
+        displayName: 'Build & Push Docker Image'
+        dependsOn: BuildAndTest
+        condition: succeeded()
+        pool:
+          vmImage: 'ubuntu-latest'
+        
+        steps:
+          - checkout: self
+          
+          # Build de la imagen Docker
+          - task: Docker@2
+            displayName: '🐳 Build Docker Image'
+            inputs:
+              containerRegistry: '${{ parameters.dockerRegistryServiceConnection }}'
+              repository: '${{ parameters.imageRepository }}'
+              command: 'build'
+              Dockerfile: '${{ parameters.dockerfilePath }}'
+              buildContext: '${{ parameters.workingDirectory }}'
+              tags: |
+                ${{ parameters.tag }}
+                latest
+          
+          # ==========================================
+          # OPCIONAL: Scan de vulnerabilidades de imagen
+          # ==========================================
+          - script: |
+              echo "=== Scanning Docker Image for Vulnerabilities ==="
+              docker run --rm -v /var/run/docker.sock:/var/run/docker.sock \
+                aquasec/trivy:latest image --severity HIGH,CRITICAL \
+                ${{ parameters.containerRegistry }}/${{ parameters.imageRepository }}:${{ parameters.tag }} || true
+            displayName: '🔒 Docker Image Vulnerability Scan - Trivy'
+            continueOnError: true
+          
+          # Push de la imagen al registry
+          - task: Docker@2
+            displayName: '🐳 Push Docker Image'
+            inputs:
+              containerRegistry: '${{ parameters.dockerRegistryServiceConnection }}'
+              repository: '${{ parameters.imageRepository }}'
+              command: 'push'
+              tags: |
+                ${{ parameters.tag }}
+                latest
