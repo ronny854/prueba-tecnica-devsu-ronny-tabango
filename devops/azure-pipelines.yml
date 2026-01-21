@@ -1,3 +1,12 @@
+parameters:
+  - name: projectname
+    type: string
+    default: 'devsu-demo-devops-python'
+    displayName: 'Nombre del proyecto/repo'
+  - name: imageRepository
+    type: string
+    default: 'ronnyt854/demo-devops-python'
+    displayName: 'Nombre del repositorio de imagen Docker'
 trigger:
   branches:
     include:
@@ -5,32 +14,33 @@ trigger:
       - develop
   paths:
     include:
-      - devsu-demo-devops-python/**
+      - ${{ parameters.projectname }}/**
 pr:
   branches:
     include:
       - main
       - develop
+  paths:
+    include:
+      - devsu-demo-devops-python/**
 
 variables:
-  pythonVersion: '3.11'
-  dockerRegistryServiceConnection: 'docker-hub-connection'
-  imageRepository: 'demo-devops-python'
-  containerRegistry: 'docker.io/your-username'
-  dockerfilePath: '$(Build.SourcesDirectory)/devsu-demo-devops-python/Dockerfile'
-  tag: '$(Build.BuildId)'
-  workingDirectory: '$(Build.SourcesDirectory)/devsu-demo-devops-python'
-  kubernetesServiceConnection: 'k8s-connection'
-  namespace: 'demo-devops'
+  dockerRegistryServiceConnection: 'dockerRegistryServiceConnection'
+  containerRegistry: 'docker.io'
+  workingDirectory: '$(Build.SourcesDirectory)/${{ parameters.projectname }}'
+  dockerfilePath: '$(Build.SourcesDirectory)/${{ parameters.projectname }}/Dockerfile'
+  buildImage: 'ronnyt854/python311_build:v1.1'
 
 stages:
 - template: stages/buildPythonStage.yml
   parameters:
-    pythonVersion: $(pythonVersion)
-    workingDirectory: $(workingDirectory)
-    dockerRegistryServiceConnection: $(dockerRegistryServiceConnection)
-    imageRepository: $(imageRepository)
-    containerRegistry: $(containerRegistry)
-    dockerfilePath: $(dockerfilePath)
-    buildContext: $(workingDirectory)
-    tag: $(tag)
+    imageRepository: '${{ parameters.imageRepository }}'
+    tag: '$(Build.BuildId)'
+    workingDirectory: '$(workingDirectory)'
+    dockerfilePath: '$(dockerfilePath)'
+    dockerBuildContext: '$(workingDirectory)'
+    dockerRegistryServiceConnection: '$(dockerRegistryServiceConnection)'
+    containerRegistry: '$(containerRegistry)'
+    buildImage: '$(buildImage)'
+    # Build/push solo en ramas (no PR). La condición exacta está en el template.
+    pushImage: true
