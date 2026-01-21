@@ -1,12 +1,25 @@
 parameters:
   - name: projectname
     type: string
-    default: 'devsu-demo-devops-python'
+    default: 'prueba-tecnica-devsu-ronny-tabango'
     displayName: 'Nombre del proyecto/repo'
   - name: imageRepository
     type: string
     default: 'ronnyt854/demo-devops-python'
     displayName: 'Nombre del repositorio de imagen Docker'
+  
+  # ==========================================
+  # PARÁMETROS SONARCLOUD
+  # ==========================================
+  - name: runSonarAnalysis
+    type: boolean
+    default: false
+    displayName: 'Ejecutar análisis de SonarCloud'
+  - name: sonarOrganization
+    type: string
+    default: 'ronny854'
+    displayName: 'SonarCloud Organization (ej: tu-org-sonarcloud)'
+
 trigger:
   branches:
     include:
@@ -30,6 +43,8 @@ variables:
   workingDirectory: '$(Build.SourcesDirectory)/${{ parameters.projectname }}'
   dockerfilePath: '$(Build.SourcesDirectory)/${{ parameters.projectname }}/Dockerfile'
   buildImage: 'ronnyt854/python311_build:v1.1'
+  # SonarCloud Service Connection (crear en Azure DevOps Project Settings)
+  sonarServiceConnection: 'conection-sonarqube-github-account'
 
 stages:
 - template: stages/buildPythonStage.yml
@@ -43,3 +58,9 @@ stages:
     buildImage: '$(buildImage)'
     # Build/push solo en ramas (no PR). La condición exacta está en el template.
     pushImage: true
+    # SonarCloud parameters
+    runSonarAnalysis: ${{ parameters.runSonarAnalysis }}
+    sonarServiceConnection: '$(sonarServiceConnection)'
+    sonarProjectKey: '${{ parameters.sonarProjectKey }}'
+    sonarProjectName: '${{ parameters.projectname }}'
+    sonarOrganization: '${{ parameters.sonarOrganization }}'

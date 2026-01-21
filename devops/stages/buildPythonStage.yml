@@ -30,6 +30,34 @@ parameters:
     type: boolean
     default: true
 
+  # ==========================================
+  # PARÁMETROS SONARCLOUD/SONARQUBE
+  # ==========================================
+  - name: runSonarAnalysis
+    type: boolean
+    default: false
+    displayName: 'Ejecutar análisis de SonarCloud/SonarQube'
+  
+  - name: sonarServiceConnection
+    type: string
+    default: 'conection-sonarqube-github-account'
+    displayName: 'Service Connection de SonarCloud/SonarQube'
+  
+  - name: sonarProjectKey
+    type: string
+    default: ''
+    displayName: 'Project Key en SonarCloud/SonarQube'
+  
+  - name: sonarProjectName
+    type: string
+    default: ''
+    displayName: 'Nombre del proyecto en SonarCloud/SonarQube'
+  
+  - name: sonarOrganization
+    type: string
+    default: ''
+    displayName: 'Organización en SonarCloud (solo para SonarCloud)'
+
 stages:
   - stage: Build
     displayName: 'Build & Test'
@@ -44,14 +72,14 @@ stages:
           - checkout: self
             fetchDepth: 0
 
-          - task: Cache@2
-            displayName: '⚡ Cache pip'
-            inputs:
-              key: 'pip | "$(Agent.OS)" | ${{ parameters.workingDirectory }}/requirements.txt'
-              restoreKeys: |
-                pip | "$(Agent.OS)"
-              path: /root/.cache/pip
-            condition: always()
+          # - task: Cache@2
+          #   displayName: '⚡ Cache pip'
+          #   inputs:
+          #     key: 'pip | "$(Agent.OS)" | ${{ parameters.workingDirectory }}/requirements.txt'
+          #     restoreKeys: |
+          #       pip | "$(Agent.OS)"
+          #     path: /root/.cache/pip
+          #   condition: always()
 
           - script: |
               set -euo pipefail
@@ -116,14 +144,47 @@ stages:
           #     DATABASE_NAME: 'db.sqlite3'
           
           # Publicar resultados de Coverage
-          - task: PublishCodeCoverageResults@2
+          - task: PublishCodeCoverageResults@1
             displayName: '📊 Publish Coverage Results'
             inputs:
               summaryFileLocation: '$(Build.ArtifactStagingDirectory)/reports/coverage.xml'
               pathToSources: '${{ parameters.workingDirectory }}'
           
           # ==========================================
-          # PASO 5 (OPCIONAL): VULNERABILITY SCAN
+          # PASO 5 (OPCIONAL): SONARCLOUD ANALYSIS
+          # ==========================================
+          # SonarCloud - Preparar análisis
+          - ${{ if eq(parameters.runSonarAnalysis, true) }}:
+            - task: SonarCloudPrepare@3
+              displayName: '🔍 SonarCloud - Prepare Analysis'
+              inputs:
+                SonarCloud: '${{ parameters.sonarServiceConnection }}'
+                organization: '${{ parameters.sonarOrganization }}'
+                scannerMode: 'CLI'
+                configMode: 'manual'
+                cliProjectKey: 'ronny854_${{ parameters.sonarProjectName }}'
+                cliProjectName: '${{ parameters.sonarProjectName }}'
+                cliSources: '${{ parameters.workingDirectory }}'
+                extraProperties: |
+                  sonar.python.coverage.reportPaths=$(Build.ArtifactStagingDirectory)/reports/coverage.xml
+                  sonar.python.version=3.11
+                  sonar.sources=${{ parameters.workingDirectory }}
+                  sonar.exclusions=**/migrations/**,**/tests/**,**/__pycache__/**,**/htmlcov/**
+                  sonar.tests=${{ parameters.workingDirectory }}
+                  sonar.test.inclusions=**/tests/**,**/test_*.py
+            
+            # SonarCloud - Ejecutar análisis
+            - task: SonarCloudAnalyze@3
+              displayName: '🔍 SonarCloud - Run Analysis'
+            
+            # SonarCloud - Publicar Quality Gate
+            - task: SonarCloudPublish@3
+              displayName: '🔍 SonarCloud - Publish Quality Gate'
+              inputs:
+                pollingTimeoutSec: '300'
+
+          # ==========================================
+          # PASO 6 (OPCIONAL): VULNERABILITY SCAN
           # ==========================================
           - script: |
               set -euo pipefail
