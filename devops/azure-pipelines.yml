@@ -1,7 +1,7 @@
 parameters:
   - name: projectname
     type: string
-    default: 'prueba-tecnica-devsu-ronny-tabango'
+    default: 'devsu-demo-devops-python'
     displayName: 'Nombre del proyecto/repo'
   - name: imageRepository
     type: string
@@ -14,6 +14,10 @@ parameters:
   - name: runSonarAnalysis
     type: boolean
     default: true
+  - name: sonarProjectName
+    type: string
+    default: 'prueba-tecnica-devsu-ronny-tabango'
+    displayName: 'Nombre del proyecto en SonarCloud'
     displayName: 'Ejecutar análisis de SonarCloud'
   - name: sonarOrganization
     type: string
@@ -61,5 +65,5 @@ stages:
     # SonarCloud parameters
     runSonarAnalysis: ${{ parameters.runSonarAnalysis }}
     sonarServiceConnection: '$(sonarServiceConnection)'
-    sonarProjectName: '${{ parameters.projectname }}'
+    sonarProjectName: '${{ parameters.sonarProjectName }}'
     sonarOrganization: '${{ parameters.sonarOrganization }}'
