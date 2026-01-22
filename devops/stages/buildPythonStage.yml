@@ -260,12 +260,12 @@ stages:
             condition: and(succeeded(), eq(${{ parameters.runImageScan }}, true))
           
           # Publicar reporte de Trivy
-          - task: PublishBuildArtifacts@1
-            displayName: '📤 Publish Trivy Report'
-            inputs:
-              pathToPublish: '$(Build.ArtifactStagingDirectory)/security'
-              artifactName: 'security-reports'
-            condition: and(succeededOrFailed(), eq(${{ parameters.runImageScan }}, true))
+          # - task: PublishBuildArtifacts@1
+          #   displayName: '📤 Publish Trivy Report'
+          #   inputs:
+          #     pathToPublish: '$(Build.ArtifactStagingDirectory)/security'
+          #     artifactName: 'security-reports'
+          #   condition: and(succeededOrFailed(), eq(${{ parameters.runImageScan }}, true))
           
           # ==========================================
           # PASO 4: PUSH DE LA IMAGEN
