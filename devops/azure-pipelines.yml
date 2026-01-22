@@ -42,13 +42,14 @@ pr:
       - devsu-demo-devops-python/**
 
 variables:
-  dockerRegistryServiceConnection: 'dockerRegistryServiceConnection'
   containerRegistry: 'docker.io'
   workingDirectory: '$(Build.SourcesDirectory)/${{ parameters.projectname }}'
   dockerfilePath: '$(Build.SourcesDirectory)/${{ parameters.projectname }}/Dockerfile'
   buildImage: 'ronnyt854/python311_build:v1.1'
   # SonarCloud Service Connection (crear en Azure DevOps Project Settings)
   sonarServiceConnection: 'conection-sonarqube-github-account'
+  # Docker Registry Service Connection
+  dockerRegistryServiceConnection: 'dockerhub-connection'
 
 stages:
 - template: stages/buildPythonStage.yml
@@ -57,11 +58,12 @@ stages:
     tag: '$(Build.BuildId)'
     workingDirectory: '$(workingDirectory)'
     dockerfilePath: '$(dockerfilePath)'
-    dockerRegistryServiceConnection: '$(dockerRegistryServiceConnection)'
     containerRegistry: '$(containerRegistry)'
     buildImage: '$(buildImage)'
     # Build/push solo en ramas (no PR). La condición exacta está en el template.
     pushImage: true
+    # Docker Registry Service Connection
+    dockerRegistryServiceConnection: '$(dockerRegistryServiceConnection)'
     # SonarCloud parameters
     runSonarAnalysis: ${{ parameters.runSonarAnalysis }}
     sonarServiceConnection: '$(sonarServiceConnection)'

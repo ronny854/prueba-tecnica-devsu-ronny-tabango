@@ -7,7 +7,6 @@ parameters:
   - name: tag
   - name: workingDirectory
   - name: dockerfilePath
-  - name: dockerRegistryServiceConnection
   - name: containerRegistry
   - name: buildImage
   - name: pushImage
@@ -29,6 +28,14 @@ parameters:
   - name: runImageScan
     type: boolean
     default: true
+
+  # ==========================================
+  # PARÁMETROS DOCKER REGISTRY
+  # ==========================================
+  - name: dockerRegistryServiceConnection
+    type: string
+    default: ''
+    displayName: 'Service Connection para Docker Registry'
 
   # ==========================================
   # PARÁMETROS SONARCLOUD/SONARQUBE
@@ -67,15 +74,6 @@ stages:
           - checkout: self
             fetchDepth: 0
 
-          # - task: Cache@2
-          #   displayName: '⚡ Cache pip'
-          #   inputs:
-          #     key: 'pip | "$(Agent.OS)" | ${{ parameters.workingDirectory }}/requirements.txt'
-          #     restoreKeys: |
-          #       pip | "$(Agent.OS)"
-          #     path: /root/.cache/pip
-          #   condition: always()
-
           - script: |
               set -euo pipefail
               python -m pip install --upgrade pip
@@ -96,31 +94,6 @@ stages:
               flake8 . --count --exit-zero --max-complexity=10 --max-line-length=127 --statistics | tee "$(Build.ArtifactStagingDirectory)/reports/flake8-style.txt"
             displayName: '🔍 Static Code Analysis'
             workingDirectory: ${{ parameters.workingDirectory }}
-          # - script: |
-          #     set -euo pipefail
-          #     mkdir -p "$(Build.ArtifactStagingDirectory)/reports"
-          #     echo "=== Running Pylint ==="
-          #     set +e
-          #     pylint api/ demo/ --output-format=json > "$(Build.ArtifactStagingDirectory)/reports/pylint-report.json"
-          #     pylint_exit=$?
-          #     set -e
-          #     echo "Pylint exit code: ${pylint_exit}"
-          #     if [ "${{ parameters.pylintContinueOnError }}" != "true" ] && [ "${pylint_exit}" -ne 0 ]; then
-          #       exit ${pylint_exit}
-          #     fi
-          #   displayName: '🔍 Static Code Analysis - Pylint'
-          #   workingDirectory: ${{ parameters.workingDirectory }}
-          # - script: |
-          #     set -euo pipefail
-          #     echo "=== Running Migrations ==="
-          #     python manage.py migrate --noinput
-          #   displayName: '🗄️ Run Migrations'
-          #   workingDirectory: ${{ parameters.workingDirectory }}
-          #   env:
-          #     DJANGO_SECRET_KEY: 'test-secret-key-for-ci'
-          #     DEBUG: 'True'
-          #     ALLOWED_HOSTS: 'localhost,127.0.0.1'
-          #     DATABASE_NAME: 'db.sqlite3'
 
           - script: |
               set -euo pipefail
@@ -145,9 +118,6 @@ stages:
               summaryFileLocation: '$(Build.ArtifactStagingDirectory)/reports/coverage.xml'
               pathToSources: '${{ parameters.workingDirectory }}'
 
-          # ==========================================
-          # PASO 5 (OPCIONAL): VULNERABILITY SCAN
-          # ==========================================
           - script: |
               set -euo pipefail
               mkdir -p "$(Build.ArtifactStagingDirectory)/reports"
@@ -245,21 +215,40 @@ stages:
         steps:
           - checkout: self
           
-          # Build de la imagen Docker
+          # ==========================================
+          # PASO 1: LOGIN AL REGISTRY (usando Service Connection)
+          # ==========================================
           - task: Docker@2
-            displayName: '🐳 Build Docker Image'
+            displayName: '🔐 Docker Login'
             inputs:
               containerRegistry: '${{ parameters.dockerRegistryServiceConnection }}'
-              repository: '${{ parameters.imageRepository }}'
-              command: 'build'
-              Dockerfile: '${{ parameters.dockerfilePath }}'
-              buildContext: '${{ parameters.workingDirectory }}'
-              tags: |
-                ${{ parameters.tag }}
-                latest
+              command: 'login'
           
           # ==========================================
-          # OPCIONAL: Scan de vulnerabilidades de imagen
+          # PASO 2: BUILD DE LA IMAGEN
+          # ==========================================
+          - script: |
+              set -euo pipefail
+              echo "=== Building Docker Image ==="
+              
+              IMAGE_FULL="${{ parameters.containerRegistry }}/${{ parameters.imageRepository }}"
+              TAG="${{ parameters.tag }}"
+              
+              echo "📦 Building: ${IMAGE_FULL}:${TAG}"
+              docker build \
+                -t "${IMAGE_FULL}:${TAG}" \
+                -f "${{ parameters.dockerfilePath }}" \
+                --label "build.id=$(Build.BuildId)" \
+                --label "build.branch=$(Build.SourceBranchName)" \
+                --label "build.commit=$(Build.SourceVersion)" \
+                "${{ parameters.workingDirectory }}"
+              
+              echo "✅ Build completado"
+              docker images | grep "${{ parameters.imageRepository }}"
+            displayName: '🐳 Docker Build'
+          
+          # ==========================================
+          # PASO 3: SCAN DE VULNERABILIDADES (TRIVY)
           # ==========================================
           - script: |
               echo "=== Scanning Docker Image for Vulnerabilities ==="
@@ -268,15 +257,38 @@ stages:
                 ${{ parameters.containerRegistry }}/${{ parameters.imageRepository }}:${{ parameters.tag }} || true
             displayName: '🔒 Docker Image Vulnerability Scan - Trivy'
             continueOnError: true
+            condition: and(succeeded(), eq(${{ parameters.runImageScan }}, true))
+          
+          # Publicar reporte de Trivy
+          - task: PublishBuildArtifacts@1
+            displayName: '📤 Publish Trivy Report'
+            inputs:
+              pathToPublish: '$(Build.ArtifactStagingDirectory)/security'
+              artifactName: 'security-reports'
             condition: and(succeededOrFailed(), eq(${{ parameters.runImageScan }}, true))
           
-          # Push de la imagen al registry
-          # - task: Docker@2
-          #   displayName: '🐳 Push Docker Image'
-          #   inputs:
-          #     containerRegistry: '${{ parameters.dockerRegistryServiceConnection }}'
-          #     repository: '${{ parameters.imageRepository }}'
-          #     command: 'push'
-          #     tags: |
-          #       ${{ parameters.tag }}
-          #       latest
+          # ==========================================
+          # PASO 4: PUSH DE LA IMAGEN
+          # ==========================================
+          - script: |
+              set -euo pipefail
+              echo "=== Pushing Docker Image ==="
+              
+              IMAGE_FULL="${{ parameters.containerRegistry }}/${{ parameters.imageRepository }}"
+              TAG="${{ parameters.tag }}"
+              
+              echo "📤 Pushing: ${IMAGE_FULL}:${TAG}"
+              docker push "${IMAGE_FULL}:${TAG}"           
+              echo "✅ Push completado"
+            displayName: '🐳 Docker Push'
+          
+          # ==========================================
+          # PASO 5: LOGOUT Y LIMPIEZA
+          # ==========================================
+          - script: |
+              echo "=== Docker Logout & Cleanup ==="
+              docker logout ${{ parameters.containerRegistry }} || true
+              docker image prune -f || true
+              echo "✅ Limpieza completada"
+            displayName: '🧹 Docker Cleanup'
+            condition: always()
