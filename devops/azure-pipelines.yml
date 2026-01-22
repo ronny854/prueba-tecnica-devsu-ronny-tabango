@@ -49,7 +49,7 @@ variables:
   # SonarCloud Service Connection (crear en Azure DevOps Project Settings)
   sonarServiceConnection: 'conection-sonarqube-github-account'
   # Docker Registry Service Connection
-  dockerRegistryServiceConnection: 'dockerhub-connection'
+  dockerRegistryServiceConnection: 'dockerRegistryServiceConnection'
 
 stages:
 - template: stages/buildPythonStage.yml
