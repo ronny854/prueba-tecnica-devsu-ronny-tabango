@@ -9,7 +9,6 @@ stages:
     pool:
       name: minikube-agents
     steps:
-      - checkout: templates
       - task: DownloadSecureFile@1
         displayName: 'Donwload ssh key for minikube access'
         name: sshKey
