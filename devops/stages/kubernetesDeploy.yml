@@ -1,0 +1,17 @@
+# Stage para validar acceso a minikube y Docker
+stages:
+- stage: ValidateMinikubeAndDocker
+  displayName: "Validar acceso a Minikube y Docker"
+  dependsOn: [build]
+  jobs:
+  - job: CheckMinikubeAndDocker
+    displayName: "Verificar kubectl y docker"
+    pool:
+      name: minikube-agents
+    steps:
+    - script: |
+        echo "Verificando pods en todos los namespaces:"
+        kubectl get pods -A
+        echo "\nVerificando contenedores Docker:"
+        docker ps
+      displayName: "kubectl get pods y docker ps"

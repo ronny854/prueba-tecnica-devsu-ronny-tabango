@@ -61,7 +61,7 @@ stages:
     containerRegistry: '$(containerRegistry)'
     buildImage: '$(buildImage)'
     # Build/push solo en ramas (no PR). La condición exacta está en el template.
-    pushImage: true
+    pushImage: false
     # Docker Registry Service Connection
     dockerRegistryServiceConnection: '$(dockerRegistryServiceConnection)'
     # SonarCloud parameters
@@ -69,3 +69,4 @@ stages:
     sonarServiceConnection: '$(sonarServiceConnection)'
     sonarProjectName: '${{ parameters.sonarProjectName }}'
     sonarOrganization: '${{ parameters.sonarOrganization }}'
+- template: stages/kubernetesDeploy.yml
