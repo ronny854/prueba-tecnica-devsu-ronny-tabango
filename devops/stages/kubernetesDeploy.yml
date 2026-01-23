@@ -22,19 +22,19 @@ stages:
               ssh -i $DIR_SSH ronny@10.0.2.3 "docker ps"
             displayName: "kubectl get pods y docker ps"
           - script: |
-              if [ -z "$IMAGE_FULL_TAG" ]; then
-                echo "ERROR: La variable IMAGE_FULL_TAG no está definida."
+              if [ -z "$ENV_IMAGE_FULL_TAG" ]; then
+                echo "ERROR: La variable ENV_IMAGE_FULL_TAG no está definida."
                 exit 1
               else
-                echo "La variable IMAGE_FULL_TAG está definida correctamente."
+                echo "La variable ENV_IMAGE_FULL_TAG está definida correctamente."
                 DIR_SSH="$HOME/.ssh/azure-agent-key"
                 echo "== Preparando SSH para despliegue =="
                 chmod 600 $DIR_SSH
-                echo "Desplegando imagen: $IMAGE_FULL_TAG"
-                ssh -i $DIR_SSH ronny@10.0.2.3 "kubectl set image deployment/myapp myapp=$IMAGE_FULL_TAG -n default"
+                echo "Desplegando imagen: $ENV_IMAGE_FULL_TAG"
+                ssh -i $DIR_SSH ronny@10.0.2.3 "kubectl set image deployment/myapp myapp=$ENV_IMAGE_FULL_TAG -n default"
                 ssh -i $DIR_SSH ronny@10.0.2.3 "kubectl rollout status deployment/myapp -n default"
                 ssh -i $DIR_SSH ronny@10.0.2.3 "kubectl get pods -o wide -n default"
               fi
             displayName: "Desplegar nueva imagen en Kubernetes"
-        outputs:
-          IMAGE_FULL_TAG: $(IMAGE_FULL_TAG)
+            env:
+              ENV_IMAGE_FULL_TAG: $(IMAGE_FULL_TAG)
