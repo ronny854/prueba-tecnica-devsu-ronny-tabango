@@ -9,16 +9,16 @@ stages:
     pool:
       name: minikube-agents
     steps:
-      - task: DownloadSecureFile@1
-        displayName: 'Donwload ssh key for minikube access'
-        name: sshKey
-        inputs:
-          secureFile: 'azure-agent-key'
+      # - task: DownloadSecureFile@1
+      #   displayName: 'Donwload ssh key for minikube access'
+      #   name: sshKey
+      #   inputs:
+      #     secureFile: 'azure-agent-key'
       - script: |
           echo "== Preparando SSH =="
           chmod 600 $(sshKey.secureFilePath)
           echo "Verificando pods en todos en el servidor Minikube:"
-          ssh -o StrictHostKeyChecking=no -i $(sshKey.secureFilePath) ronny@10.0.2.3 "kubectl -- get pods -A"
+          ssh ronny@10.0.2.3 "kubectl -- get pods -A"
           echo "\nVerificando contenedores Docker:"
-          ssh -o StrictHostKeyChecking=no -i $(sshKey.secureFilePath) ronny@10.0.2.3 "docker ps"
+          ssh ronny@10.0.2.3 "docker ps"
         displayName: "kubectl get pods y docker ps"
