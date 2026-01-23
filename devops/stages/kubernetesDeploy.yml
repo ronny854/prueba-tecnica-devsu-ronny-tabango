@@ -1,20 +1,40 @@
 # Stage para validar acceso a minikube y Docker
 stages:
-- stage: ValidateMinikubeAndDocker
-  displayName: "Validar acceso a Minikube y Docker"
-  dependsOn: [build]
-  jobs:
-  - job: CheckMinikubeAndDocker
-    displayName: "Verificar kubectl y docker"
-    pool:
-      name: minikube-agents
-    steps:
-      - script: |
-          DIR_SSH="$HOME/.ssh/azure-agent-key"
-          echo "== Preparando SSH =="
-          chmod 600 $DIR_SSH
-          echo "Verificando pods en todos en el servidor Minikube:"
-          ssh -i $DIR_SSH ronny@10.0.2.3 "kubectl get pods -A"
-          echo "\nVerificando contenedores Docker:"
-          ssh -i $DIR_SSH ronny@10.0.2.3 "docker ps"
-        displayName: "kubectl get pods y docker ps"
+  - stage: ValidateMinikubeAndDocker
+    displayName: "Validar acceso a Minikube y Docker"
+    dependsOn: [build]
+    variables:
+      - name: IMAGE_FULL_TAG
+        value: $[ dependencies.build.outputs['BuildAndTest.PushImageStep.IMAGE_FULL_TAG'] ]
+    jobs:
+      - job: CheckMinikubeAndDocker
+        displayName: "Verificar kubectl y docker"
+        pool:
+          name: minikube-agents
+        steps:
+          - script: |
+              DIR_SSH="$HOME/.ssh/azure-agent-key"
+              echo "== Preparando SSH =="
+              chmod 600 $DIR_SSH
+              echo "Verificando pods en todos en el servidor Minikube:"
+              ssh -i $DIR_SSH ronny@10.0.2.3 "kubectl get pods -A"
+              echo "\nVerificando contenedores Docker:"
+              ssh -i $DIR_SSH ronny@10.0.2.3 "docker ps"
+            displayName: "kubectl get pods y docker ps"
+          - script: |
+              if [ -z "$IMAGE_FULL_TAG" ]; then
+                echo "ERROR: La variable IMAGE_FULL_TAG no está definida."
+                exit 1
+              else
+                echo "La variable IMAGE_FULL_TAG está definida correctamente."
+                DIR_SSH="$HOME/.ssh/azure-agent-key"
+                echo "== Preparando SSH para despliegue =="
+                chmod 600 $DIR_SSH
+                echo "Desplegando imagen: $IMAGE_FULL_TAG"
+                ssh -i $DIR_SSH ronny@10.0.2.3 "kubectl set image deployment/myapp myapp=$IMAGE_FULL_TAG -n default"
+                ssh -i $DIR_SSH ronny@10.0.2.3 "kubectl rollout status deployment/myapp -n default"
+                ssh -i $DIR_SSH ronny@10.0.2.3 "kubectl get pods -o wide -n default"
+              fi
+            displayName: "Desplegar nueva imagen en Kubernetes"
+        outputs:
+          IMAGE_FULL_TAG: $(IMAGE_FULL_TAG)

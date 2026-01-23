@@ -1,0 +1,10 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: app-config
+data:
+  APP_ENV: "production"
+  APP_DEBUG: "false"
+  DATABASE_NAME: "db.sqlite3"
+  DEBUG: "false"
+  ALLOWED_HOSTS: "localhost,127.0.0.1,0.0.0.0"
