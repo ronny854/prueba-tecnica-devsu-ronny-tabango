@@ -5,7 +5,7 @@ stages:
     dependsOn: [build]
     variables:
       - name: IMAGE_FULL_TAG
-        value: $[ dependencies.build.outputs['BuildAndTest.PushImageStep.IMAGE_FULL_TAG'] ]
+        value: $[ stageDependencies.build.BuildAndTest.outputs['PushImageStep.IMAGE_FULL_TAG'] ]
     jobs:
       - job: CheckMinikubeAndDocker
         displayName: "Verificar kubectl y docker"
