@@ -10,7 +10,7 @@ stages:
           name: minikube-agents
         variables:
         - name: IMAGE_FULL_TAG
-          value: $[stageDependencies.Build.BuildAndTest.outputs['PushImageStep.IMAGE_FULL_TAG']]
+          value: $[stageDependencies.Build.DockerBuildPush.outputs['PushImageStep.IMAGE_FULL_TAG']]
         steps:
           - script: |
               DIR_SSH="$HOME/.ssh/azure-agent-key"
