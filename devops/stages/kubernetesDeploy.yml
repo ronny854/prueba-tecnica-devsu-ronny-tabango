@@ -22,8 +22,7 @@ stages:
               ssh -i $DIR_SSH ronny@10.0.2.3 "docker ps"
             displayName: "kubectl get pods y docker ps"
           - script: |
-              echo "$(IMAGE_FULL_TAG)"
-              echo "$ENV_IMAGE_FULL_TAG"
+              echo "Directorio k8s existe en el agente de build:"
               ls
               if [ -z "$ENV_IMAGE_FULL_TAG" ]; then
                 echo "ERROR: La variable ENV_IMAGE_FULL_TAG no está definida."
@@ -32,14 +31,15 @@ stages:
                 echo "La variable ENV_IMAGE_FULL_TAG está definida correctamente."
                 echo "El directorio k8s existe. Copiando al servidor..."
                 DIR_SSH="$HOME/.ssh/azure-agent-key"
-                scp -i $DIR_SSH -r k8s ronny@10.0.2.3:/tmp/
-                echo "== Preparando SSH para despliegue =="
                 chmod 600 $DIR_SSH
+                scp -i $DIR_SSH -r k8s ronny@10.0.2.3:/tmp/
+                echo "Archivos k8s copiados..."
+                echo "== Preparando SSH para despliegue =="
                 echo "Desplegando imagen: $ENV_IMAGE_FULL_TAG"
-              
-                ssh -i $DIR_SSH ronny@10.0.2.3 "kubectl set image /tmp/k8s/deployment/myapp myapp=$ENV_IMAGE_FULL_TAG -n default"
-                ssh -i $DIR_SSH ronny@10.0.2.3 "kubectl rollout status /tmp/k8s/deployment/myapp -n default"
-                ssh -i $DIR_SSH ronny@10.0.2.3 "kubectl get pods -o wide -n default"
+                ssh -i $DIR_SSH ronny@10.0.2.3 "kubectl apply -f /tmp/k8s/ -n myapp"
+                ssh -i $DIR_SSH ronny@10.0.2.3 "kubectl set image deployment/myapp myapp=$ENV_IMAGE_FULL_TAG -n myapp"
+                ssh -i $DIR_SSH ronny@10.0.2.3 "kubectl rollout status deployment/myapp -n myapp"
+                ssh -i $DIR_SSH ronny@10.0.2.3 "kubectl get pods -o wide -n myapp"
               else
                 echo "El directorio k8s no existe. No se realiza despliegue."
                 exit 1
