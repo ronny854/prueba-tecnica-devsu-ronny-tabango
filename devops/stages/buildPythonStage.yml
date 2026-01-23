@@ -280,7 +280,7 @@ stages:
               echo "📤 Pushing: ${IMAGE_FULL}:${TAG}"
               docker push "${IMAGE_FULL}:${TAG}"           
               echo "✅ Push completado"
-              IMAGE_FULL_TAG="${{ parameters.imageRepository }}:${TAG}"
+              IMAGE_FULL_TAG="${IMAGE_FULL}:${TAG}"
               echo "Imagen pushada: ${IMAGE_FULL_TAG}"
               echo "##vso[task.setvariable variable=IMAGE_FULL_TAG;isOutput=true]$IMAGE_FULL_TAG"
             displayName: '🐳 Docker Push'
