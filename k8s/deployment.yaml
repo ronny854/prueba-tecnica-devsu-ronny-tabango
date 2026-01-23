@@ -1,20 +1,20 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: myapp-deployment
+  name: myapp
   namespace: myapp
 spec:
   replicas: 2
   selector:
     matchLabels:
-      app: myapp-deployment
+      app: myapp
   template:
     metadata:
       labels:
-        app: myapp-deployment
+        app: myapp
     spec:
       containers:
-        - name: myapp-deployment
+        - name: myapp
           # Esta imagen es solo placeholder inicial
           image: docker.io/ronnyt854/demo-devops-python:2108
           ports:

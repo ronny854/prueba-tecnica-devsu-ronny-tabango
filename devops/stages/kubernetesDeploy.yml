@@ -36,8 +36,12 @@ stages:
                 echo "Archivos k8s copiados..."
                 echo "== Preparando SSH para despliegue =="
                 echo "Desplegando imagen: $ENV_IMAGE_FULL_TAG"
-                ssh -i $DIR_SSH ronny@10.0.2.3 "kubectl apply -f /tmp/k8s/ -n myapp"
-                ssh -i $DIR_SSH ronny@10.0.2.3 "kubectl set image deployment/myapp-deployment myapp-deployment=$ENV_IMAGE_FULL_TAG -n myapp"
+                # Aplicar namespace primero
+                ssh -i $DIR_SSH ronny@10.0.2.3 "kubectl apply -f /tmp/k8s/namespace.yaml"
+                # Aplicar el resto de manifiestos en el namespace myapp
+                ssh -i $DIR_SSH ronny@10.0.2.3 "kubectl apply -f /tmp/k8s -n myapp"
+                # Actualizar la imagen del deployment
+                ssh -i $DIR_SSH ronny@10.0.2.3 "kubectl set image deployment/myapp myapp=$ENV_IMAGE_FULL_TAG -n myapp"
                 ssh -i $DIR_SSH ronny@10.0.2.3 "kubectl rollout status deployment/myapp -n myapp"
                 ssh -i $DIR_SSH ronny@10.0.2.3 "kubectl get pods -o wide -n myapp"
               else
