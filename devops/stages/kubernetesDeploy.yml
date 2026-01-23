@@ -9,16 +9,6 @@ stages:
     pool:
       name: minikube-agents
     steps:
-      # - task: DownloadSecureFile@1
-      #   displayName: 'Donwload ssh key for minikube access'
-      #   name: sshKey
-      #   inputs:
-      #     secureFile: 'azure-agent-key'
-      - script: |
-          whoami
-          echo $HOME
-          ls -la ~/.ssh || true
-        displayName: "DEBUG usuario y ssh"
       - script: |
           DIR_SSH="$HOME/.ssh/azure-agent-key"
           echo "== Preparando SSH =="
