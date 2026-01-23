@@ -15,8 +15,13 @@ stages:
       #   inputs:
       #     secureFile: 'azure-agent-key'
       - script: |
+          whoami
+          echo $HOME
+          ls -la ~/.ssh || true
+        displayName: "DEBUG usuario y ssh"
+      - script: |
           echo "== Preparando SSH =="
-          chmod 600 $(sshKey.secureFilePath)
+          # chmod 600 $(sshKey.secureFilePath)
           echo "Verificando pods en todos en el servidor Minikube:"
           ssh ronny@10.0.2.3 "kubectl get pods -A"
           echo "\nVerificando contenedores Docker:"
