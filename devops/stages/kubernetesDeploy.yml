@@ -20,10 +20,11 @@ stages:
           ls -la ~/.ssh || true
         displayName: "DEBUG usuario y ssh"
       - script: |
+          DIR_SSH="$HOME/.ssh/azure-agent-key"
           echo "== Preparando SSH =="
-          # chmod 600 $(sshKey.secureFilePath)
+          chmod 600 $DIR_SSH
           echo "Verificando pods en todos en el servidor Minikube:"
-          ssh ronny@10.0.2.3 "kubectl get pods -A"
+          ssh -i $DIR_SSH ronny@10.0.2.3 "kubectl get pods -A"
           echo "\nVerificando contenedores Docker:"
-          ssh ronny@10.0.2.3 "docker ps"
+          ssh -i $DIR_SSH ronny@10.0.2.3 "docker ps"
         displayName: "kubectl get pods y docker ps"
