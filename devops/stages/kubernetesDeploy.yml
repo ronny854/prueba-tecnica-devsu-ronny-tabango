@@ -18,7 +18,7 @@ stages:
           echo "== Preparando SSH =="
           chmod 600 $(sshKey.secureFilePath)
           echo "Verificando pods en todos en el servidor Minikube:"
-          ssh ronny@10.0.2.3 "kubectl -- get pods -A"
+          ssh ronny@10.0.2.3 "kubectl get pods -A"
           echo "\nVerificando contenedores Docker:"
           ssh ronny@10.0.2.3 "docker ps"
         displayName: "kubectl get pods y docker ps"
