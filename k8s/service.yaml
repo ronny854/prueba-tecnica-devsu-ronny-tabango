@@ -1,7 +1,7 @@
 apiVersion: v1
 kind: Service
 metadata:
-  name: demo-devops-python-service
+  name: demo-devops-python
   namespace: myapp
   labels:
     app: demo-devops-python
@@ -12,9 +12,6 @@ spec:
   selector:
     app: demo-devops-python
   ports:
-    - name: http
-      protocol: TCP
-      port: 80
-      targetPort: http
+    - port: 80
+      targetPort: 8000
   type: ClusterIP
-  sessionAffinity: None

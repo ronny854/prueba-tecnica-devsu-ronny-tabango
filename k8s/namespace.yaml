@@ -4,5 +4,5 @@ metadata:
   name: myapp
   labels:
     name: myapp
-    environment: development
+    environment: production
     app: demo-devops-python

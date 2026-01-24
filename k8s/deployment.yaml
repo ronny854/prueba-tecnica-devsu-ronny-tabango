@@ -11,7 +11,7 @@ metadata:
     description: "Backend principal de la app DevOps Python"
     maintainer: "DevOps Team"
 spec:
-  replicas: 1
+  replicas: 2
   selector:
     matchLabels:
       app: demo-devops-python
@@ -22,18 +22,35 @@ spec:
     spec:
       containers:
         - name: demo-devops-python
-          image: docker.io/ronnyt854/demo-devops-python:latest
+          image: IMAGE_PLACEHOLDER
+          imagePullPolicy: Always
           ports:
             - containerPort: 8000
-          livenessProbe:
-            httpGet:
-              path: /api/health/
-              port: 8000
-            initialDelaySeconds: 10
-            periodSeconds: 10
+
+          envFrom:
+            - configMapRef:
+                name: app-config
+            - secretRef:
+                name: app-secret
+
+          resources:
+            requests:
+              cpu: "200m"
+              memory: "256Mi"
+            limits:
+              cpu: "500m"
+              memory: "512Mi"
+
           readinessProbe:
             httpGet:
-              path: /api/health/
+              path: /api/
               port: 8000
-            initialDelaySeconds: 5
-            periodSeconds: 5
+            initialDelaySeconds: 15
+            periodSeconds: 10
+
+          livenessProbe:
+            httpGet:
+              path: /api/
+              port: 8000
+            initialDelaySeconds: 60
+            periodSeconds: 20
