@@ -5,4 +5,4 @@ metadata:
   labels:
     name: myapp
     environment: production
-    app: demo-devops-python
+    managed-by: azure-devops

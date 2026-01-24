@@ -5,52 +5,141 @@ metadata:
   namespace: myapp
   labels:
     app: demo-devops-python
-    component: backend
     version: v1
+    tier: backend
   annotations:
-    description: "Backend principal de la app DevOps Python"
+    description: "Django REST API - Demo DevOps Python"
     maintainer: "DevOps Team"
 spec:
+  # Número de réplicas - puede ser escalado manualmente o por HPA
   replicas: 2
+  
+  # Estrategia de despliegue rolling update
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 1        # Crear 1 pod adicional durante el update
+      maxUnavailable: 0  # Mantener todos los pods disponibles durante el update
+  
+  # Selector de pods
   selector:
     matchLabels:
       app: demo-devops-python
+  
   template:
     metadata:
       labels:
         app: demo-devops-python
+        version: v1
+        tier: backend
+      annotations:
+        prometheus.io/scrape: "true"
+        prometheus.io/port: "8000"
+        prometheus.io/path: "/metrics"
+    
     spec:
+      # Security context a nivel de pod
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1000
+        runAsGroup: 1000
+        fsGroup: 1000
+      
       containers:
-        - name: demo-devops-python
-          image: IMAGE_PLACEHOLDER
-          imagePullPolicy: Always
-          ports:
-            - containerPort: 8000
-
-          envFrom:
-            - configMapRef:
-                name: app-config
-            - secretRef:
-                name: app-secret
-
-          resources:
-            requests:
-              cpu: "200m"
-              memory: "256Mi"
-            limits:
-              cpu: "500m"
-              memory: "512Mi"
-
-          readinessProbe:
-            httpGet:
-              path: /api/
-              port: 8000
-            initialDelaySeconds: 15
-            periodSeconds: 10
-
-          livenessProbe:
-            httpGet:
-              path: /api/
-              port: 8000
-            initialDelaySeconds: 60
-            periodSeconds: 20
+      - name: demo-devops-python
+        # La imagen será reemplazada por el pipeline con IMAGE_PLACEHOLDER
+        image: IMAGE_PLACEHOLDER
+        imagePullPolicy: Always
+        
+        ports:
+        - name: http
+          containerPort: 8000
+          protocol: TCP
+        
+        # Variables de entorno desde ConfigMap
+        envFrom:
+        - configMapRef:
+            name: django-config
+        
+        # Variables de entorno desde Secret
+        env:
+        - name: DJANGO_SECRET_KEY
+          valueFrom:
+            secretKeyRef:
+              name: django-secret
+              key: DJANGO_SECRET_KEY
+        
+        # Recursos garantizados y límites
+        resources:
+          requests:
+            memory: "256Mi"
+            cpu: "200m"
+          limits:
+            memory: "512Mi"
+            cpu: "500m"
+        
+        # Volumen para la base de datos SQLite
+        volumeMounts:
+        - name: sqlite-storage
+          mountPath: /app/data
+        - name: static-files
+          mountPath: /app/staticfiles
+        
+        # Startup probe - da tiempo para migraciones (hasta 2 minutos)
+        startupProbe:
+          httpGet:
+            path: /api/
+            port: 8000
+            scheme: HTTP
+          initialDelaySeconds: 10
+          periodSeconds: 10
+          timeoutSeconds: 5
+          successThreshold: 1
+          failureThreshold: 12  # 12 * 10s = 120 segundos
+        
+        # Liveness probe - verifica que la app sigue viva
+        livenessProbe:
+          httpGet:
+            path: /api/
+            port: 8000
+            scheme: HTTP
+          initialDelaySeconds: 60
+          periodSeconds: 30
+          timeoutSeconds: 10
+          successThreshold: 1
+          failureThreshold: 3
+        
+        # Readiness probe - verifica que la app está lista para tráfico
+        readinessProbe:
+          httpGet:
+            path: /api/
+            port: 8000
+            scheme: HTTP
+          initialDelaySeconds: 30
+          periodSeconds: 10
+          timeoutSeconds: 5
+          successThreshold: 1
+          failureThreshold: 3
+        
+        # Security context a nivel de contenedor
+        securityContext:
+          allowPrivilegeEscalation: false
+          readOnlyRootFilesystem: false  # Django necesita escribir en /tmp
+          capabilities:
+            drop:
+            - ALL
+            add:
+            - NET_BIND_SERVICE
+      
+      # Volúmenes
+      volumes:
+      - name: sqlite-storage
+        persistentVolumeClaim:
+          claimName: django-sqlite-pvc
+      - name: static-files
+        emptyDir: {}
+      
+      terminationGracePeriodSeconds: 30
+      
+      # Restart policy
+      restartPolicy: Always

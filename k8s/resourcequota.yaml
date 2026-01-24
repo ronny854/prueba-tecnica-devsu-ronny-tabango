@@ -1,0 +1,127 @@
+apiVersion: v1
+kind: ResourceQuota
+metadata:
+  name: myapp-quota
+  namespace: myapp
+  labels:
+    app: demo-devops-python
+    component: quota
+spec:
+  hard:
+    # ==========================================
+    # LÍMITES DE RECURSOS
+    # Ajustados para servidor con 4GB RAM / 4 CPU
+    # ==========================================
+    
+    # CPU - Dejar ~1 CPU para sistema y otros componentes
+    requests.cpu: "2.5"         # Total CPU requests en el namespace
+    limits.cpu: "3"             # Total CPU limits en el namespace
+    
+    # MEMORIA - Dejar ~1.5GB para sistema y otros componentes
+    requests.memory: "2Gi"      # Total memoria requests en el namespace
+    limits.memory: "2.5Gi"      # Total memoria limits en el namespace
+    
+    # ==========================================
+    # LÍMITES DE OBJETOS
+    # ==========================================
+    pods: "10"                           # Máximo 10 pods
+    services: "5"                        # Máximo 5 services
+    persistentvolumeclaims: "3"          # Máximo 3 PVCs
+    configmaps: "10"                     # Máximo 10 ConfigMaps
+    secrets: "10"                        # Máximo 10 Secrets
+    
+    # ==========================================
+    # LÍMITES DE ALMACENAMIENTO
+    # ==========================================
+    requests.storage: "10Gi"             # Total storage requests
+
+---
+apiVersion: v1
+kind: LimitRange
+metadata:
+  name: myapp-limits
+  namespace: myapp
+  labels:
+    app: demo-devops-python
+    component: limits
+spec:
+  limits:
+  # ==========================================
+  # LÍMITES POR POD
+  # ==========================================
+  - type: Pod
+    max:
+      cpu: "1"             # Máximo 1 CPU por pod
+      memory: "1Gi"        # Máximo 1GB por pod
+    min:
+      cpu: "50m"           # Mínimo 50 millicores por pod
+      memory: "64Mi"       # Mínimo 64MB por pod
+  
+  # ==========================================
+  # LÍMITES POR CONTAINER
+  # Ajustados para la aplicación Django
+  # ==========================================
+  - type: Container
+    # Valores por defecto si no se especifican
+    default:
+      cpu: "400m"          # Default limit: 400 millicores
+      memory: "512Mi"      # Default limit: 512MB
+    defaultRequest:
+      cpu: "200m"          # Default request: 200 millicores
+      memory: "256Mi"      # Default request: 256MB
+    
+    # Valores máximos permitidos
+    max:
+      cpu: "1"             # Máximo 1 CPU por contenedor
+      memory: "1Gi"        # Máximo 1GB por contenedor
+    
+    # Valores mínimos requeridos
+    min:
+      cpu: "50m"           # Mínimo 50 millicores
+      memory: "64Mi"       # Mínimo 64MB
+  
+  # ==========================================
+  # LÍMITES DE ALMACENAMIENTO
+  # ==========================================
+  - type: PersistentVolumeClaim
+    max:
+      storage: "5Gi"       # Máximo 5GB por PVC
+    min:
+      storage: "1Gi"       # Mínimo 1GB por PVC
+
+---
+# ==========================================
+# NOTAS Y CÁLCULOS
+# ==========================================
+# 
+# Servidor: 4GB RAM, 4 CPU
+# 
+# DISTRIBUCIÓN DE RECURSOS:
+# 
+# Sistema Operativo + Minikube:
+#   - ~1 CPU
+#   - ~1.5 GB RAM
+# 
+# Disponible para aplicaciones:
+#   - ~3 CPU
+#   - ~2.5 GB RAM
+# 
+# CONFIGURACIÓN ACTUAL (2 réplicas):
+# Por pod:
+#   - Request: 200m CPU, 256Mi RAM
+#   - Limit: 500m CPU, 512Mi RAM
+# 
+# 2 pods:
+#   - Request total: 400m CPU, 512Mi RAM
+#   - Limit total: 1000m CPU, 1024Mi RAM
+# 
+# Con HPA (hasta 5 réplicas):
+#   - Request total: 1000m CPU, 1280Mi RAM
+#   - Limit total: 2500m CPU, 2560Mi RAM
+# 
+# MARGEN DE SEGURIDAD:
+# - Quota permite hasta 2.5 CPU requests y 2Gi RAM requests
+# - Esto permite escalar hasta 5 réplicas sin problemas
+# - HPA escalará automáticamente según la carga
+# 
+# ==========================================

@@ -1,0 +1,60 @@
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: demo-devops-python-netpol
+  namespace: myapp
+  labels:
+    app: demo-devops-python
+    component: security
+spec:
+  podSelector:
+    matchLabels:
+      app: demo-devops-python
+  
+  policyTypes:
+  - Ingress
+  - Egress
+  
+  # ==========================================
+  # REGLAS DE ENTRADA (Ingress)
+  # ==========================================
+  ingress:
+  # Permitir tráfico desde cualquier namespace en el mismo cluster
+  # (útil para Ingress Controller, monitoring, etc.)
+  - from:
+    - podSelector: {}
+    ports:
+    - protocol: TCP
+      port: 8000
+  
+  # Permitir tráfico desde fuera del cluster (NodePort)
+  - ports:
+    - protocol: TCP
+      port: 8000
+  
+  # ==========================================
+  # REGLAS DE SALIDA (Egress)
+  # ==========================================
+  egress:
+  # Permitir DNS (necesario para resolver nombres)
+  - to:
+    - namespaceSelector:
+        matchLabels:
+          kubernetes.io/metadata.name: kube-system
+    ports:
+    - protocol: UDP
+      port: 53
+  
+  # Permitir comunicación interna del cluster
+  - to:
+    - podSelector: {}
+  
+  # Permitir salida a Internet (para APIs externas si es necesario)
+  # Comentar estas líneas si no necesitas acceso a Internet
+  - to:
+    - namespaceSelector: {}
+    ports:
+    - protocol: TCP
+      port: 443
+    - protocol: TCP
+      port: 80

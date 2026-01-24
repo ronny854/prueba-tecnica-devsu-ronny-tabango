@@ -1,17 +1,49 @@
 apiVersion: v1
 kind: Service
 metadata:
-  name: demo-devops-python
+  name: demo-devops-python-service
   namespace: myapp
   labels:
     app: demo-devops-python
-    component: backend
+    component: service
   annotations:
-    description: "Service para exponer la aplicación demo-devops-python"
+    description: "Service for Django REST API"
 spec:
+  type: NodePort  # Usar ClusterIP si tienes Ingress configurado
+  selector:
+    app: demo-devops-python
+  
+  ports:
+  - name: http
+    protocol: TCP
+    port: 8000        # Puerto del servicio dentro del cluster
+    targetPort: 8000  # Puerto del contenedor
+    nodePort: 30800   # Puerto expuesto en el nodo (rango: 30000-32767)
+  
+  # Mantener sesiones con el mismo pod (sticky sessions)
+  sessionAffinity: ClientIP
+  sessionAffinityConfig:
+    clientIP:
+      timeoutSeconds: 10800  # 3 horas
+
+---
+# Service alternativo ClusterIP (para uso con Ingress)
+apiVersion: v1
+kind: Service
+metadata:
+  name: demo-devops-python-clusterip
+  namespace: myapp
+  labels:
+    app: demo-devops-python
+    component: service
+    type: clusterip
+spec:
+  type: ClusterIP
   selector:
     app: demo-devops-python
   ports:
-    - port: 80
-      targetPort: 8000
-  type: ClusterIP
+  - name: http
+    protocol: TCP
+    port: 80          # Puerto interno del servicio
+    targetPort: 8000  # Puerto del contenedor
+  sessionAffinity: ClientIP
