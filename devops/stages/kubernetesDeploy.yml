@@ -78,20 +78,20 @@ stages:
 
               # # Aplicar namespace primero
               # echo "1️⃣  Aplicando namespace..."
-              # ssh -i $DIR_SSH ronny@10.0.2.3 "kubectl apply -f /tmp/k8s/namespace.yaml"
+              # ssh -i $DIR_SSH ronny@10.0.2.3 "kubectl apply -f $HOME/k8s/namespace.yaml"
 
               # # Aplicar ConfigMap y Secret
               # echo "2️⃣  Aplicando ConfigMap y Secret..."
-              # ssh -i $DIR_SSH ronny@10.0.2.3 "kubectl apply -f /tmp/k8s/configmap.yaml -n myapp"
-              # ssh -i $DIR_SSH ronny@10.0.2.3 "kubectl apply -f /tmp/k8s/secret.yaml -n myapp"
+              # ssh -i $DIR_SSH ronny@10.0.2.3 "kubectl apply -f $HOME/k8s/configmap.yaml -n myapp"
+              # ssh -i $DIR_SSH ronny@10.0.2.3 "kubectl apply -f $HOME/k8s/secret.yaml -n myapp"
 
               # # Aplicar Service
               # echo "3️⃣  Aplicando Service..."
-              # ssh -i $DIR_SSH ronny@10.0.2.3 "kubectl apply -f /tmp/k8s/service.yaml -n myapp"
+              # ssh -i $DIR_SSH ronny@10.0.2.3 "kubectl apply -f $HOME/k8s/service.yaml -n myapp"
 
               # # Aplicar Deployment con la imagen correcta
               # echo "4️⃣  Aplicando Deployment..."
-              # ssh -i $DIR_SSH ronny@10.0.2.3 "kubectl apply -f /tmp/k8s/deployment.yaml -n myapp"
+              # ssh -i $DIR_SSH ronny@10.0.2.3 "kubectl apply -f $HOME/k8s/deployment.yaml -n myapp"
 
               # # Actualizar la imagen del deployment
               # echo "5️⃣  Actualizando imagen del deployment a: $ENV_IMAGE_FULL_TAG"
@@ -99,11 +99,11 @@ stages:
 
               # # Aplicar HPA
               # echo "6️⃣  Aplicando HPA..."
-              # ssh -i $DIR_SSH ronny@10.0.2.3 "kubectl apply -f /tmp/k8s/hpa.yaml -n myapp"
+              # ssh -i $DIR_SSH ronny@10.0.2.3 "kubectl apply -f $HOME/k8s/hpa.yaml -n myapp"
 
               # # Aplicar Ingress
               # echo "7️⃣  Aplicando Ingress..."
-              # ssh -i $DIR_SSH ronny@10.0.2.3 "kubectl apply -f /tmp/k8s/ingress.yaml -n myapp"
+              # ssh -i $DIR_SSH ronny@10.0.2.3 "kubectl apply -f $HOME/k8s/ingress.yaml -n myapp"
 
               # # Esperar a que el rollout termine
               # echo "⏳ Esperando a que el deployment esté listo..."
