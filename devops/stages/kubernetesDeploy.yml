@@ -65,16 +65,21 @@ stages:
 
                 echo "☸️ Aplicando manifiestos..."
                 kubectl apply -f $HOME/k8s/
-
+                kubectl apply -f $HOME/k8s/namespace.yaml
+                kubectl apply -f $HOME/k8s/configmap.yaml -n myapp
+                kubectl apply -f $HOME/k8s/secret.yaml -n myapp
+                kubectl apply -f $HOME/k8s/service.yaml -n myapp
+                kubectl apply -f $HOME/k8s/deployment.yaml -n myapp
+                kubectl apply -f $HOME/k8s/ingress.yaml -n myapp
+                kubectl apply -f $HOME/k8s/hpa.yaml -n myapp
                 echo "⏳ Esperando rollout..."
-                kubectl rollout status deployment/demo-devops-python -n myapp --timeout=4m || (
+                kubectl rollout status deployment/demo-devops-python -n myapp --timeout=5m || (
                   echo "❌ Rollout falló"
                   kubectl get pods -n myapp
                   kubectl describe pod -n myapp
                   kubectl get events -n myapp --sort-by=.lastTimestamp | tail -20
                   exit 1
                 )
-
                 echo "📊 Estado final:"
                 kubectl get pods -n myapp -o wide
                 kubectl get svc -n myapp
