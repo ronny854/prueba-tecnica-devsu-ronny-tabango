@@ -56,11 +56,11 @@ stages:
               echo "🔁 Inyectando imagen en deployment.yaml"
               sed -i "s|IMAGE_PLACEHOLDER|$IMAGE_FULL_TAG|g" k8s/deployment.yaml
               echo "📦 Sincronizando k8s/"
-              # scp -i $SSH_KEY -r k8s ronny@10.0.2.3:$HOME/
+              # scp -i $SSH_KEY -r k8s ronny@10.0.2.3:$HOME/k8s/
               rsync -avz -e "ssh -i $SSH_KEY" k8s/ $VM_USER@$VM_IP:$HOME/k8s/
               echo "🚀 Ejecutando despliegue remoto..."
-              ssh -i $DIR_SSH $VM_USER@$VM_IP "chmod 600 $HOME/k8s/deploy.sh"
-              ssh -i $DIR_SSH $VM_USER@$VM_IP "$HOME/k8s/deploy.sh"
+              ssh -i $SSH_KEY $VM_USER@$VM_IP "chmod 600 $HOME/k8s/deploy.sh"
+              ssh -i $SSH_KEY $VM_USER@$VM_IP "$HOME/k8s/deploy.sh"
             displayName: "🚀 Deploy en Minikube"
             env:
               IMAGE_FULL_TAG: $(IMAGE_FULL_TAG)
