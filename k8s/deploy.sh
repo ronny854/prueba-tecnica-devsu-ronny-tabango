@@ -8,7 +8,7 @@ set -e
 
 # Variables
 NAMESPACE="myapp"
-K8S_DIR="./k8s"
+K8S_DIR="$HOME/k8s"
 
 # Colores
 GREEN='\033[0;32m'
