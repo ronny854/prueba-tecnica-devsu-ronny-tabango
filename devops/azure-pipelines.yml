@@ -13,7 +13,7 @@ parameters:
   # ==========================================
   - name: runSonarAnalysis
     type: boolean
-    default: true
+    default: false
     displayName: 'Ejecutar análisis de SonarCloud'
   - name: sonarProjectName
     type: string
