@@ -1,25 +1,33 @@
 apiVersion: networking.k8s.io/v1
 kind: Ingress
 metadata:
-  name: mi-app-ingress
+  name: demo-devops-python-ingress
   namespace: myapp
+  labels:
+    app: demo-devops-python
+    component: backend
   annotations:
     kubernetes.io/ingress.class: nginx
-    cert-manager.io/cluster-issuer: letsencrypt-prod  # Si usas cert-manager
-    nginx.ingress.kubernetes.io/ssl-redirect: "true"
+    nginx.ingress.kubernetes.io/rewrite-target: /
+    nginx.ingress.kubernetes.io/ssl-redirect: "false"
 spec:
-  tls:
-  - hosts:
-    - api-python.com
-    secretName: mi-app-tls
   rules:
-  - host: api-python.com
+  - host: demo-devops-python.local
     http:
       paths:
       - path: /
         pathType: Prefix
         backend:
           service:
-            name: mi-app-service
+            name: demo-devops-python-service
+            port:
+              number: 80
+  - http:
+      paths:
+      - path: /
+        pathType: Prefix
+        backend:
+          service:
+            name: demo-devops-python-service
             port:
               number: 80

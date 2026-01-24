@@ -13,6 +13,12 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 
 FROM python-base as production
 
+# Metadata
+LABEL maintainer="DevOps Team" \
+      description="Demo DevOps Python - Django REST API" \
+      version="1.0" \
+      app="demo-devops-python"
+
 ARG APP_USER=appuser
 ARG APP_GROUP=appgroup
 ARG APP_UID=1000
@@ -43,8 +49,8 @@ RUN pip install --no-cache-dir /wheels/* \
 COPY --chown=$APP_USER:$APP_GROUP . .
 COPY --chown=$APP_USER:$APP_GROUP entrypoint.sh /entrypoint.sh
 
-# Crear directorio para base de datos y asignar permisos
-RUN mkdir -p $APP_HOME/data \
+# Crear directorios para base de datos y archivos estáticos, y asignar permisos
+RUN mkdir -p $APP_HOME/data $APP_HOME/staticfiles \
     && chown -R $APP_USER:$APP_GROUP $APP_HOME \
     && chmod +x /entrypoint.sh
 

@@ -3,9 +3,13 @@ kind: ConfigMap
 metadata:
   name: app-config
   namespace: myapp
+  labels:
+    app: demo-devops-python
+    component: backend
 data:
   APP_ENV: "production"
-  APP_DEBUG: "false"
-  DATABASE_NAME: "db.sqlite3"
-  DEBUG: "false"
-  ALLOWED_HOSTS: "localhost,127.0.0.1,0.0.0.0"
+  DEBUG: "False"
+  DATABASE_NAME: "data/db.sqlite3"
+  ALLOWED_HOSTS: "localhost,127.0.0.1,0.0.0.0,demo-devops-python.local,demo-devops-python-service"
+  PYTHONUNBUFFERED: "1"
+  PYTHONDONTWRITEBYTECODE: "1"

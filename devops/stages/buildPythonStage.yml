@@ -273,17 +273,20 @@ stages:
           - script: |
               set -euo pipefail
               echo "=== Pushing Docker Image ==="
-              
               IMAGE_FULL="${{ parameters.containerRegistry }}/${{ parameters.imageRepository }}"
               TAG="${{ parameters.tag }}"
-              
               echo "📤 Pushing: ${IMAGE_FULL}:${TAG}"
-              docker push "${IMAGE_FULL}:${TAG}"           
+              docker push "${IMAGE_FULL}:${TAG}"
               echo "✅ Push completado"
+              # Etiquetar y pushear latest
+              echo "📤 Tagging and pushing: ${IMAGE_FULL}:latest"
+              docker tag "${IMAGE_FULL}:${TAG}" "${IMAGE_FULL}:latest"
+              docker push "${IMAGE_FULL}:latest"
+              echo "✅ Push latest completado"
               IMAGE_FULL_TAG="${IMAGE_FULL}:${TAG}"
               echo "Imagen pushada: ${IMAGE_FULL_TAG}"
               echo "##vso[task.setvariable variable=IMAGE_FULL_TAG;isOutput=true]$IMAGE_FULL_TAG"
-            displayName: '🐳 Docker Push'
+            displayName: '🐳 Docker Push (tag & latest)'
             name: PushImageStep
           
           # ==========================================

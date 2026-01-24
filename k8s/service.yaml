@@ -1,13 +1,20 @@
 apiVersion: v1
 kind: Service
 metadata:
-  name: app-service
+  name: demo-devops-python-service
   namespace: myapp
+  labels:
+    app: demo-devops-python
+    component: backend
+  annotations:
+    description: "Service para exponer la aplicación demo-devops-python"
 spec:
   selector:
-    app: myapp
+    app: demo-devops-python
   ports:
-    - protocol: TCP
+    - name: http
+      protocol: TCP
       port: 80
-      targetPort: 8000
+      targetPort: http
   type: ClusterIP
+  sessionAffinity: None
