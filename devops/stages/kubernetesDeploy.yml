@@ -56,8 +56,8 @@ stages:
               echo "🔁 Inyectando imagen en deployment.yaml"
               sed -i "s|IMAGE_PLACEHOLDER|$IMAGE_FULL_TAG|g" k8s/deployment.yaml
               echo "📦 Sincronizando k8s/"
-              scp -i $DIR_SSH -r k8s ronny@10.0.2.3:$HOME/
-              # rsync -avz -e "ssh -i $SSH_KEY" k8s/ $VM_USER@$VM_IP:$HOME/k8s/
+              # scp -i $SSH_KEY -r k8s ronny@10.0.2.3:$HOME/
+              rsync -avz -e "ssh -i $SSH_KEY" k8s/ $VM_USER@$VM_IP:$HOME/
 
               echo "🚀 Ejecutando despliegue remoto..."
 
