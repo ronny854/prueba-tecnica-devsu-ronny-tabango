@@ -33,11 +33,11 @@ spec:
   # TLS configuration (descomentar en producción con cert-manager)
   # tls:
   # - hosts:
-  #   - demo-devops-python.yourdomain.com
+  #   - prueba.devsu.demopython.ronnytabango.com
   #   secretName: demo-devops-python-tls
   
   rules:
-  - host: demo-devops-python.local  # Cambiar por tu dominio real
+  - host: prueba.devsu.demopython.ronnytabango.com  # Cambiar por tu dominio real
     http:
       paths:
       - path: /

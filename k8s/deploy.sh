@@ -62,6 +62,7 @@ echo "📋 Aplicando recursos adicionales..."
 # Esperar rollout
 echo "⏳ Esperando rollout..."
 kubectl rollout status deployment/demo-devops-python -n $NAMESPACE --timeout=5m
+HOST=$(kubectl get ingress demo-devops-python-ingress -n myapp -o jsonpath='{.spec.rules[0].host}')
 
 echo ""
 echo -e "${GREEN}=======================================${NC}"
@@ -76,7 +77,7 @@ echo ""
 kubectl get svc -n $NAMESPACE
 
 echo ""
-echo "🔗 Acceso:"
-echo "  NodePort: kubectl get svc demo-devops-python-service -n $NAMESPACE"
-echo "  Port-forward: kubectl port-forward svc/demo-devops-python-service -n $NAMESPACE 8080:8000"
+echo "🔗 Acceso URL en Maquina Virtual(server-minikube): http://$HOST/api/"
+echo "🔗 Acceso URL en localhost maquina local: http://localhost:30800/api/"
+echo ""
 echo ""
