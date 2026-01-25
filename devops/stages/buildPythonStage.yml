@@ -10,18 +10,18 @@ parameters:
   - name: sonarProjectName
   - name: sonarOrganization
 
+variables:
+  containerRegistry: 'docker.io'
+  workingDirectory: '$(Build.SourcesDirectory)/${{ parameters.projectname }}'
+  buildImage: 'ronnyt854/python311_build:v1.1'
+  # SonarCloud Service Connection (crear en Azure DevOps Project Settings)
+  sonarServiceConnection: 'conection-sonarqube-github-account'
+  # Docker Registry Service Connection
+  dockerRegistryServiceConnection: 'dockerRegistryServiceConnection'
 
 stages:
   - stage: CI
     displayName: 'CI'
-    variables:
-      containerRegistry: 'docker.io'
-      workingDirectory: '$(Build.SourcesDirectory)/${{ parameters.projectname }}'
-      buildImage: 'ronnyt854/python311_build:v1.1'
-      # SonarCloud Service Connection (crear en Azure DevOps Project Settings)
-      sonarServiceConnection: 'conection-sonarqube-github-account'
-      # Docker Registry Service Connection
-      dockerRegistryServiceConnection: 'dockerRegistryServiceConnection'
     jobs:
       - template: ../jobs/jobBuildPython.yml
         parameters:
