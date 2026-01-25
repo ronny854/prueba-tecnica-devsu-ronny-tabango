@@ -4,7 +4,7 @@ parameters:
 
 jobs:
   - job: BuildAndTest
-    displayName: 'Build and Test Python Application'
+    displayName: 'Build and Test Python App'
     pool:
       vmImage: 'ubuntu-latest'
     container:
