@@ -4,7 +4,7 @@ parameters:
 - name: imageRepository
 - name: tag
 - name: containerRegistry
-- name: dockerRegistryServiceConnection
+# - name: dockerRegistryServiceConnection
 - name: runSonarAnalysis
 jobs:
   - job: DockerBuildPush
