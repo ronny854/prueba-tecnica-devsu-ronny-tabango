@@ -29,9 +29,10 @@ steps:
       extraProperties: |
         sonar.python.coverage.reportPaths=$(Build.ArtifactStagingDirectory)/analysis-reports/coverage.xml
         sonar.python.version=3.11
-        sonar.sources=${{ parameters.workingDirectory }}
+        sonar.projectBaseDir=${{ parameters.workingDirectory }}
+        sonar.sources=.
         sonar.exclusions=**/migrations/**,**/tests/**,**/__pycache__/**,**/htmlcov/**
-        sonar.tests=${{ parameters.workingDirectory }}
+        sonar.tests=.
         sonar.test.inclusions=**/tests/**,**/test_*.py
   
   - task: SonarCloudAnalyze@3

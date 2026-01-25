@@ -31,6 +31,9 @@ steps:
     coverage run --source='.' manage.py test --verbosity=2
     coverage report -m
     coverage xml -o "$(Build.ArtifactStagingDirectory)/reports/coverage.xml"
+    # Fix absolute paths in coverage.xml to relative paths for SonarQube compatibility
+    sed -i "s|<source>$(pwd)</source>|<source>.</source>|g" "$(Build.ArtifactStagingDirectory)/reports/coverage.xml"
+    sed -i "s|filename=\"$(pwd)/|filename=\"|g" "$(Build.ArtifactStagingDirectory)/reports/coverage.xml"
     coverage html -d "$(Build.ArtifactStagingDirectory)/reports/htmlcov"
   displayName: 'Test - Unit Tests & Coverage'
   workingDirectory: ${{ parameters.workingDirectory }}
