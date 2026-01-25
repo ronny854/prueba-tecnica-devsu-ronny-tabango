@@ -1,11 +1,11 @@
 # Stage para validar acceso a minikube y Docker
 stages:
   - stage: CD
-    displayName: "CD - Kubernetes Deploy"
+    displayName: "CD - Minikube Deploy"
     dependsOn: [CI]
     jobs:
-      - job: CheckMinikubeAndDocker
-        displayName: "Verificar kubectl y docker"
+      - job: DeployAppMinikube
+        displayName: "Deploy App"
         pool:
           name: minikube-agents
         variables:
