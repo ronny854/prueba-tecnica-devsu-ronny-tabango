@@ -5,7 +5,6 @@ parameters:
 - name: tag
 - name: containerRegistry
 - name: dockerRegistryServiceConnection
-- name: pushImage
 - name: runSonarAnalysis
 jobs:
   - job: DockerBuildPush
