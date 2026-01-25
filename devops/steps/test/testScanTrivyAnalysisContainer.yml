@@ -1,7 +1,7 @@
 parameters:
- name: imageRepository
- name: tag
- name: containerRegistry
+- name: imageRepository
+- name: tag
+- name: containerRegistry
 
 steps:
 - script: |
