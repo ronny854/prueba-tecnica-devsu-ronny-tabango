@@ -40,3 +40,4 @@ stages:
           tag: ${{ parameters.tag }}
           containerRegistry: ${{ parameters.containerRegistry }}
           dockerRegistryServiceConnection: ${{ parameters.dockerRegistryServiceConnection }}
+          runSonarAnalysis: ${{ parameters.runSonarAnalysis }}
