@@ -1,52 +1,42 @@
 parameters:
-  - name: projectname
   - name: imageRepository
   - name: tag
+  - name: workingDirectory
   - name: dockerfilePath
+  - name: containerRegistry
+  - name: buildImage
+  - name: dockerRegistryServiceConnection
   # ==========================================
   # PARÁMETROS SONARCLOUD/SONARQUBE
   # ==========================================
   - name: runSonarAnalysis
+  - name: sonarServiceConnection
   - name: sonarProjectName
   - name: sonarOrganization
+
 
 stages:
   - stage: CI
     displayName: 'CI'
-    dependsOn: []
-    variables:
-      - group: MINIKUBE-VARS
-      - name: workingDirectory
-        value: '$(Build.SourcesDirectory)/${{ parameters.projectname }}'
-      - name: buildImage
-        value: 'ronnyt854/python311_build:v1.1'
-      - name: containerRegistry
-        value: 'docker.io'
-      # - name: dockerRegistryServiceConnection
-      #   value: 'dockerRegistryServiceConnection'
-      # - name: sonarServiceConnection
-      #   value: 'conection-sonarqube-github-account'
-
     jobs:
       - template: ../jobs/jobBuildPython.yml
         parameters:
-          workingDirectory: $(workingDirectory)
-          buildImage: $(buildImage)
+          workingDirectory: ${{ parameters.workingDirectory }}
+          buildImage: ${{ parameters.buildImage }}
 
       - ${{ if eq(parameters.runSonarAnalysis, true) }}:
         - template: ../jobs/jobSonarQubeAnalisys.yml
           parameters:
-            workingDirectory: $(workingDirectory)
-            # sonarServiceConnection: $(sonarServiceConnection)
+            workingDirectory: ${{ parameters.workingDirectory }}
+            sonarServiceConnection: ${{ parameters.sonarServiceConnection }}
             sonarProjectName: ${{ parameters.sonarProjectName }}
             sonarOrganization: ${{ parameters.sonarOrganization }}
 
       - template: ../jobs/jobDockerBuildPush.yml
         parameters:
-          workingDirectory: $(workingDirectory)
+          workingDirectory: ${{ parameters.workingDirectory }}
           dockerfilePath: ${{ parameters.dockerfilePath }}
           imageRepository: ${{ parameters.imageRepository }}
           tag: ${{ parameters.tag }}
-          containerRegistry: $(containerRegistry)
-          # dockerRegistryServiceConnection: $(dockerRegistryServiceConnection)
-          runSonarAnalysis: ${{ parameters.runSonarAnalysis }}
+          containerRegistry: ${{ parameters.containerRegistry }}
+          dockerRegistryServiceConnection: ${{ parameters.dockerRegistryServiceConnection }}
