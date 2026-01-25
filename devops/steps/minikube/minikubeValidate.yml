@@ -1,0 +1,23 @@
+steps:
+- script: |
+    set -euo pipefail
+    echo "=== Verificando Minikube y Docker ==="
+    echo " VM_USER: $VM_USER"
+    echo " VM_IP: $VM_IP"
+    SSH_KEY="$HOME/.ssh/azure-agent-key"
+    chmod 600 $SSH_KEY
+    echo "🔍 Conectando a Minikube VM..."
+    ssh -i $SSH_KEY $VM_USER@$VM_IP << 'EOF'
+      set -e
+      echo "✅ SSH OK"
+      echo "🐳 Docker:"
+      docker --version
+      echo "☸️ Kubernetes:"
+      kubectl get nodes
+      echo "📦 Pods:"
+      kubectl get pods -A | head -20
+    EOF
+  displayName: "Status Minikube"
+  env:
+    VM_USER: $(VM_USER)
+    VM_IP: $(VM_IP)

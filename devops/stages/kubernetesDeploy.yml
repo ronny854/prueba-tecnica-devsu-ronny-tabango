@@ -1,66 +1,17 @@
 # Stage para validar acceso a minikube y Docker
 stages:
-  - stage: DeployAppMinikube
-    displayName: "Desplegar aplicación en Minikube"
-    dependsOn: [Build]
+  - stage: CD
+    displayName: "CD - Kubernetes Deploy"
+    dependsOn: [CI]
     jobs:
       - job: CheckMinikubeAndDocker
         displayName: "Verificar kubectl y docker"
         pool:
           name: minikube-agents
         variables:
+        - group: MINIKUBE-VARS
         - name: IMAGE_FULL_TAG
-          value: $[stageDependencies.Build.DockerBuildPush.outputs['PushImageStep.IMAGE_FULL_TAG']]
+          value: $[stageDependencies.CI.DockerBuildPush.outputs['PushImageStep.IMAGE_FULL_TAG']]
         steps:
-          - script: |
-              set -euo pipefail
-
-              VM_USER=ronny
-              VM_IP=10.0.2.3
-              SSH_KEY="$HOME/.ssh/azure-agent-key"
-
-              chmod 600 $SSH_KEY
-
-              echo "🔍 Conectando a Minikube VM..."
-
-              ssh -i $SSH_KEY $VM_USER@$VM_IP << 'EOF'
-                set -e
-
-                echo "✅ SSH OK"
-
-                echo "🐳 Docker:"
-                docker --version
-
-                echo "☸️ Kubernetes:"
-                kubectl get nodes
-
-                echo "📦 Pods:"
-                kubectl get pods -A | head -20
-              EOF
-            displayName: "🔍 Validar Minikube"
-          - script: |
-              set -euo pipefail
-
-              VM_USER=ronny
-              VM_IP=10.0.2.3
-              SSH_KEY="$HOME/.ssh/azure-agent-key"
-
-              chmod 600 $SSH_KEY
-
-              if [ -z "${IMAGE_FULL_TAG:-}" ]; then
-                echo "❌ IMAGE_FULL_TAG no definida"
-                exit 1
-              fi
-
-              echo "🖼️ Imagen: $IMAGE_FULL_TAG"
-              echo "🔁 Inyectando imagen en deployment.yaml"
-              sed -i "s|IMAGE_PLACEHOLDER|$IMAGE_FULL_TAG|g" k8s/deployment.yaml
-              echo "📦 Sincronizando k8s/"
-              # scp -i $SSH_KEY -r k8s ronny@10.0.2.3:$HOME/k8s/
-              rsync -avz -e "ssh -i $SSH_KEY" k8s/ $VM_USER@$VM_IP:$HOME/k8s/
-              echo "🚀 Ejecutando despliegue remoto..."
-              ssh -i $SSH_KEY $VM_USER@$VM_IP "chmod 600 $HOME/k8s/deploy.sh"
-              ssh -i $SSH_KEY $VM_USER@$VM_IP "bash $HOME/k8s/deploy.sh"
-            displayName: "🚀 Deploy en Minikube"
-            env:
-              IMAGE_FULL_TAG: $(IMAGE_FULL_TAG)
+          - template: ../steps/minikube/minikubeValidate.yml
+          - template: ../steps/minikube/minikubeDeploy.yml

@@ -1,0 +1,43 @@
+parameters:
+- name: workingDirectory
+- name: sonarServiceConnection
+- name: sonarProjectName
+- name: sonarOrganization
+
+steps:
+  - checkout: self
+    fetchDepth: 0
+
+  - task: DownloadBuildArtifacts@1
+    displayName: 'Download Coverage Reports'
+    inputs:
+      buildType: 'current'
+      downloadType: 'single'
+      artifactName: 'analysis-reports'
+      downloadPath: '$(Build.ArtifactStagingDirectory)'
+  
+  - task: SonarCloudPrepare@3
+    displayName: 'SonarCloud - Prepare Analysis'
+    inputs:
+      SonarCloud: '${{ parameters.sonarServiceConnection }}'
+      organization: '${{ parameters.sonarOrganization }}'
+      scannerMode: 'CLI'
+      configMode: 'manual'
+      cliProjectKey: '${{ parameters.sonarOrganization }}_${{ parameters.sonarProjectName }}'
+      cliProjectName: '${{ parameters.sonarProjectName }}'
+      cliSources: '${{ parameters.workingDirectory }}'
+      extraProperties: |
+        sonar.python.coverage.reportPaths=$(Build.ArtifactStagingDirectory)/analysis-reports/coverage.xml
+        sonar.python.version=3.11
+        sonar.sources=${{ parameters.workingDirectory }}
+        sonar.exclusions=**/migrations/**,**/tests/**,**/__pycache__/**,**/htmlcov/**
+        sonar.tests=${{ parameters.workingDirectory }}
+        sonar.test.inclusions=**/tests/**,**/test_*.py
+  
+  - task: SonarCloudAnalyze@3
+    displayName: 'SonarCloud - Run Analysis'
+
+  - task: SonarCloudPublish@3
+    displayName: 'SonarCloud - Publish Quality Gate'
+    inputs:
+      pollingTimeoutSec: '300'

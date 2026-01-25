@@ -1,0 +1,19 @@
+parameters:
+ name: imageRepository
+ name: tag
+ name: containerRegistry
+
+steps:
+- script: |
+    echo "=== Scanning Docker Image for Vulnerabilities ==="
+    docker run --rm -v /var/run/docker.sock:/var/run/docker.sock \
+      aquasec/trivy:latest image --severity HIGH,CRITICAL \
+      ${{ parameters.containerRegistry }}/${{ parameters.imageRepository }}:${{ parameters.tag }} || true
+  displayName: 'Docker Image Vulnerability Scan - Trivy'
+
+#Publicar reporte de Trivy
+- task: PublishBuildArtifacts@1
+  displayName: 'Publish Trivy Report'
+  inputs:
+    pathToPublish: '$(Build.ArtifactStagingDirectory)/security'
+    artifactName: 'security-reports'

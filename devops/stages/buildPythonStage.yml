@@ -1,301 +1,46 @@
-# ==========================================
-# Template: Build & Test Python Application
-# ==========================================
-# Parámetros ajustables por el usuario
 parameters:
+  - name: projectname
   - name: imageRepository
   - name: tag
-  - name: workingDirectory
   - name: dockerfilePath
-  - name: containerRegistry
-  - name: buildImage
-  - name: pushImage
-    type: boolean
-    default: true
-
-  - name: failOnFlake8Critical
-    type: boolean
-    default: true
-
-  - name: pylintContinueOnError
-    type: boolean
-    default: true
-
-  - name: runSecurityScans
-    type: boolean
-    default: true
-
-  - name: runImageScan
-    type: boolean
-    default: true
-
-  # ==========================================
-  # PARÁMETROS DOCKER REGISTRY
-  # ==========================================
-  - name: dockerRegistryServiceConnection
-    type: string
-    default: ''
-    displayName: 'Service Connection para Docker Registry'
-
   # ==========================================
   # PARÁMETROS SONARCLOUD/SONARQUBE
   # ==========================================
   - name: runSonarAnalysis
-    type: boolean
-    default: false
-    displayName: 'Ejecutar análisis de SonarCloud/SonarQube'
-  
-  - name: sonarServiceConnection
-    type: string
-    default: 'conection-sonarqube-github-account'
-    displayName: 'Service Connection de SonarCloud/SonarQube'
-  
   - name: sonarProjectName
-    type: string
-    default: ''
-    displayName: 'Nombre del proyecto en SonarCloud/SonarQube'
-  
   - name: sonarOrganization
-    type: string
-    default: ''
-    displayName: 'Organización en SonarCloud (solo para SonarCloud)'
+
 
 stages:
-  - stage: Build
-    displayName: 'Build & Test'
+  - stage: CI
+    displayName: 'CI'
+    variables:
+      containerRegistry: 'docker.io'
+      workingDirectory: '$(Build.SourcesDirectory)/${{ parameters.projectname }}'
+      buildImage: 'ronnyt854/python311_build:v1.1'
+      # SonarCloud Service Connection (crear en Azure DevOps Project Settings)
+      sonarServiceConnection: 'conection-sonarqube-github-account'
+      # Docker Registry Service Connection
+      dockerRegistryServiceConnection: 'dockerRegistryServiceConnection'
     jobs:
-      - job: BuildAndTest
-        displayName: 'Build, Test & Analyze'
-        pool:
-          vmImage: 'ubuntu-latest'
-        container:
-          image: ${{ parameters.buildImage }}
-        steps:
-          - checkout: self
-            fetchDepth: 0
+      - template: ../jobs/jobBuildPython.yml
+        parameters:
+          workingDirectory: $(workingDirectory)
+          buildImage: $(buildImage)
 
-          - script: |
-              set -euo pipefail
-              python -m pip install --upgrade pip
-              pip install -r requirements.txt
-            displayName: '📦 Code Build'
-            workingDirectory: ${{ parameters.workingDirectory }}
-          - script: |
-              set -euo pipefail
-              mkdir -p "$(Build.ArtifactStagingDirectory)/reports"
-              echo "=== Running Flake8 (critical errors) ==="
-              if [ "${{ parameters.failOnFlake8Critical }}" = "true" ]; then
-                flake8 . --count --select=E9,F63,F7,F82 --show-source --statistics | tee "$(Build.ArtifactStagingDirectory)/reports/flake8-critical.txt"
-              else
-                flake8 . --count --select=E9,F63,F7,F82 --show-source --statistics | tee "$(Build.ArtifactStagingDirectory)/reports/flake8-critical.txt" || true
-              fi
-
-              echo "=== Running Flake8 (style, non-blocking) ==="
-              flake8 . --count --exit-zero --max-complexity=10 --max-line-length=127 --statistics | tee "$(Build.ArtifactStagingDirectory)/reports/flake8-style.txt"
-            displayName: '🔍 Static Code Analysis'
-            workingDirectory: ${{ parameters.workingDirectory }}
-
-          - script: |
-              set -euo pipefail
-              mkdir -p "$(Build.ArtifactStagingDirectory)/reports"
-              echo "=== Running Tests with Coverage ==="
-              coverage run --source='.' manage.py test --verbosity=2
-              coverage report -m
-              coverage xml -o "$(Build.ArtifactStagingDirectory)/reports/coverage.xml"
-              coverage html -d "$(Build.ArtifactStagingDirectory)/reports/htmlcov"
-            displayName: '📊 Code Coverage'
-            workingDirectory: ${{ parameters.workingDirectory }}
-          #   env:
-          #     DJANGO_SECRET_KEY: 'test-secret-key-for-ci'
-          #     DEBUG: 'True'
-          #     ALLOWED_HOSTS: 'localhost,127.0.0.1'
-          #     DATABASE_NAME: 'db.sqlite3'
-          
-          # Publicar resultados de Coverage
-          - task: PublishCodeCoverageResults@2
-            displayName: '📊 Publish Coverage Results'
-            inputs:
-              summaryFileLocation: '$(Build.ArtifactStagingDirectory)/reports/coverage.xml'
-              pathToSources: '${{ parameters.workingDirectory }}'
-
-          - script: |
-              set -euo pipefail
-              mkdir -p "$(Build.ArtifactStagingDirectory)/reports"
-              echo "=== Running Bandit (Security Linter) ==="
-              bandit -r api/ demo/ -f json -o "$(Build.ArtifactStagingDirectory)/reports/bandit-report.json" || true
-              bandit -r api/ demo/ -f txt | tee "$(Build.ArtifactStagingDirectory)/reports/bandit-report.txt" || true
-            displayName: '🔒 Security Scan - Bandit'
-            workingDirectory: ${{ parameters.workingDirectory }}
-            continueOnError: true
-            condition: and(succeededOrFailed(), eq(${{ parameters.runSecurityScans }}, true))
-          
-          # Publicar artefactos de análisis
-          - task: PublishBuildArtifacts@1
-            displayName: '📤 Publish Analysis Reports'
-            inputs:
-              pathToPublish: '$(Build.ArtifactStagingDirectory)/reports'
-              artifactName: 'analysis-reports'
-            condition: always()
-
-      # ==========================================
-      # JOB 2: SONARCLOUD ANALYSIS (requiere Java)
-      # ==========================================
       - ${{ if eq(parameters.runSonarAnalysis, true) }}:
-        - job: SonarCloudAnalysis
-          displayName: 'SonarCloud Analysis'
-          dependsOn: BuildAndTest
-          condition: succeeded()
-          pool:
-            vmImage: 'ubuntu-latest'
-          # NO usar container - ubuntu-latest ya tiene Java
-          steps:
-            - checkout: self
-              fetchDepth: 0
-            
-            # Descargar artefactos de coverage del job anterior
-            - task: DownloadBuildArtifacts@1
-              displayName: '📥 Download Coverage Reports'
-              inputs:
-                buildType: 'current'
-                downloadType: 'single'
-                artifactName: 'analysis-reports'
-                downloadPath: '$(Build.ArtifactStagingDirectory)'
-            
-            # SonarCloud - Preparar análisis
-            - task: SonarCloudPrepare@3
-              displayName: '🔍 SonarCloud - Prepare Analysis'
-              inputs:
-                SonarCloud: '${{ parameters.sonarServiceConnection }}'
-                organization: '${{ parameters.sonarOrganization }}'
-                scannerMode: 'CLI'
-                configMode: 'manual'
-                cliProjectKey: '${{ parameters.sonarOrganization }}_${{ parameters.sonarProjectName }}'
-                cliProjectName: '${{ parameters.sonarProjectName }}'
-                cliSources: '${{ parameters.workingDirectory }}'
-                extraProperties: |
-                  sonar.python.coverage.reportPaths=$(Build.ArtifactStagingDirectory)/analysis-reports/coverage.xml
-                  sonar.python.version=3.11
-                  sonar.sources=${{ parameters.workingDirectory }}
-                  sonar.exclusions=**/migrations/**,**/tests/**,**/__pycache__/**,**/htmlcov/**
-                  sonar.tests=${{ parameters.workingDirectory }}
-                  sonar.test.inclusions=**/tests/**,**/test_*.py
-            
-            # SonarCloud - Ejecutar análisis
-            - task: SonarCloudAnalyze@3
-              displayName: '🔍 SonarCloud - Run Analysis'
-            
-            # SonarCloud - Publicar Quality Gate
-            - task: SonarCloudPublish@3
-              displayName: '🔍 SonarCloud - Publish Quality Gate'
-              inputs:
-                pollingTimeoutSec: '300'
+        - template: ../jobs/jobSonarQubeAnalisys.yml
+          parameters:
+            workingDirectory: $(workingDirectory)
+            sonarServiceConnection: $(sonarServiceConnection)
+            sonarProjectName: ${{ parameters.sonarProjectName }}
+            sonarOrganization: ${{ parameters.sonarOrganization }}
 
-      # ==========================================
-      # JOB 3: DOCKER BUILD & PUSH
-      # ==========================================
-      - job: DockerBuildPush
-        displayName: 'Build & Push Docker Image'
-        dependsOn: 
-          - BuildAndTest
-          - ${{ if eq(parameters.runSonarAnalysis, true) }}:
-            - SonarCloudAnalysis
-        # No construir/pushear en Pull Requests; solo en ramas main/develop.
-        condition: and(
-          succeeded(),
-          ${{ parameters.pushImage }},
-          ne(variables['Build.Reason'], 'PullRequest'),
-          or(
-            eq(variables['Build.SourceBranch'], 'refs/heads/main'),
-            eq(variables['Build.SourceBranch'], 'refs/heads/develop')
-            )
-          )
-        pool:
-          vmImage: 'ubuntu-latest'
-        
-        steps:
-          - checkout: self
-          
-          # ==========================================
-          # PASO 1: LOGIN AL REGISTRY (usando Service Connection)
-          # ==========================================
-          - task: Docker@2
-            displayName: '🔐 Docker Login'
-            inputs:
-              containerRegistry: '${{ parameters.dockerRegistryServiceConnection }}'
-              command: 'login'
-          
-          # ==========================================
-          # PASO 2: BUILD DE LA IMAGEN
-          # ==========================================
-          - script: |
-              set -euo pipefail
-              echo "=== Building Docker Image ==="
-              
-              IMAGE_FULL="${{ parameters.containerRegistry }}/${{ parameters.imageRepository }}"
-              TAG="${{ parameters.tag }}"
-              
-              echo "📦 Building: ${IMAGE_FULL}:${TAG}"
-              docker build \
-                -t "${IMAGE_FULL}:${TAG}" \
-                -f "${{ parameters.dockerfilePath }}" \
-                --label "build.id=$(Build.BuildId)" \
-                --label "build.branch=$(Build.SourceBranchName)" \
-                --label "build.commit=$(Build.SourceVersion)" \
-                "${{ parameters.workingDirectory }}"
-              
-              echo "✅ Build completado"
-              docker images | grep "${{ parameters.imageRepository }}"
-            displayName: '🐳 Docker Build'
-          
-          # ==========================================
-          # PASO 3: SCAN DE VULNERABILIDADES (TRIVY)
-          # ==========================================
-          - script: |
-              echo "=== Scanning Docker Image for Vulnerabilities ==="
-              docker run --rm -v /var/run/docker.sock:/var/run/docker.sock \
-                aquasec/trivy:latest image --severity HIGH,CRITICAL \
-                ${{ parameters.containerRegistry }}/${{ parameters.imageRepository }}:${{ parameters.tag }} || true
-            displayName: '🔒 Docker Image Vulnerability Scan - Trivy'
-            continueOnError: true
-            condition: and(succeeded(), eq(${{ parameters.runImageScan }}, true))
-          
-          # Publicar reporte de Trivy
-          # - task: PublishBuildArtifacts@1
-          #   displayName: '📤 Publish Trivy Report'
-          #   inputs:
-          #     pathToPublish: '$(Build.ArtifactStagingDirectory)/security'
-          #     artifactName: 'security-reports'
-          #   condition: and(succeededOrFailed(), eq(${{ parameters.runImageScan }}, true))
-          
-          # ==========================================
-          # PASO 4: PUSH DE LA IMAGEN
-          # ==========================================
-          - script: |
-              set -euo pipefail
-              echo "=== Pushing Docker Image ==="
-              IMAGE_FULL="${{ parameters.containerRegistry }}/${{ parameters.imageRepository }}"
-              TAG="${{ parameters.tag }}"
-              echo "📤 Pushing: ${IMAGE_FULL}:${TAG}"
-              docker push "${IMAGE_FULL}:${TAG}"
-              echo "✅ Push completado"
-              # Etiquetar y pushear latest
-              echo "📤 Tagging and pushing: ${IMAGE_FULL}:latest"
-              docker tag "${IMAGE_FULL}:${TAG}" "${IMAGE_FULL}:latest"
-              docker push "${IMAGE_FULL}:latest"
-              echo "✅ Push latest completado"
-              IMAGE_FULL_TAG="${IMAGE_FULL}:${TAG}"
-              echo "Imagen pushada: ${IMAGE_FULL_TAG}"
-              echo "##vso[task.setvariable variable=IMAGE_FULL_TAG;isOutput=true]$IMAGE_FULL_TAG"
-            displayName: '🐳 Docker Push (tag & latest)'
-            name: PushImageStep
-          
-          # ==========================================
-          # PASO 5: LOGOUT Y LIMPIEZA
-          # ==========================================
-          - script: |
-              echo "=== Docker Logout & Cleanup ==="
-              docker logout ${{ parameters.containerRegistry }} || true
-              docker image prune -f || true
-              echo "✅ Limpieza completada"
-            displayName: '🧹 Docker Cleanup'
-            condition: always()
+      - template: ../jobs/jobDockerBuildPush.yml
+        parameters:
+          workingDirectory: $(workingDirectory)
+          dockerfilePath: ${{ parameters.dockerfilePath }}
+          imageRepository: ${{ parameters.imageRepository }}
+          tag: ${{ parameters.tag }}
+          containerRegistry: $(containerRegistry)
+          dockerRegistryServiceConnection: $(dockerRegistryServiceConnection)

@@ -7,6 +7,10 @@ parameters:
     type: string
     default: 'ronnyt854/demo-devops-python'
     displayName: 'Nombre del repositorio de imagen Docker'
+  - name: dockerfilePath
+    type: string
+    default: 'devsu-demo-devops-python/Dockerfile'
+    displayName: 'Ruta del Dockerfile'
   
   # ==========================================
   # PARÁMETROS SONARCLOUD
@@ -32,41 +36,16 @@ trigger:
   paths:
     include:
       - devsu-demo-devops-python/**
-pr:
-  branches:
-    include:
-      - main
-      - develop
-  paths:
-    include:
-      - devsu-demo-devops-python/**
-
-variables:
-  containerRegistry: 'docker.io'
-  workingDirectory: '$(Build.SourcesDirectory)/${{ parameters.projectname }}'
-  dockerfilePath: '$(Build.SourcesDirectory)/${{ parameters.projectname }}/Dockerfile'
-  buildImage: 'ronnyt854/python311_build:v1.1'
-  # SonarCloud Service Connection (crear en Azure DevOps Project Settings)
-  sonarServiceConnection: 'conection-sonarqube-github-account'
-  # Docker Registry Service Connection
-  dockerRegistryServiceConnection: 'dockerRegistryServiceConnection'
 
 stages:
 - template: stages/buildPythonStage.yml
   parameters:
+    projectname: '${{ parameters.projectname }}'
     imageRepository: '${{ parameters.imageRepository }}'
     tag: '$(Build.BuildId)'
-    workingDirectory: '$(workingDirectory)'
-    dockerfilePath: '$(dockerfilePath)'
-    containerRegistry: '$(containerRegistry)'
-    buildImage: '$(buildImage)'
-    # Build/push solo en ramas (no PR). La condición exacta está en el template.
-    pushImage: true
-    # Docker Registry Service Connection
-    dockerRegistryServiceConnection: '$(dockerRegistryServiceConnection)'
-    # SonarCloud parameters
+    dockerfilePath: '${{ parameters.dockerfilePath }}'
     runSonarAnalysis: ${{ parameters.runSonarAnalysis }}
-    sonarServiceConnection: '$(sonarServiceConnection)'
     sonarProjectName: '${{ parameters.sonarProjectName }}'
     sonarOrganization: '${{ parameters.sonarOrganization }}'
+
 - template: stages/kubernetesDeploy.yml
