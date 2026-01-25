@@ -1,0 +1,20 @@
+parameters:
+- name: workingDirectory
+- name: buildImage
+
+jobs:
+  - job: BuildAndTest
+    displayName: 'Build and Test Python Application'
+    pool:
+      vmImage: 'ubuntu-latest'
+    container:
+      image: ${{ parameters.buildImage }}
+    steps:
+      - checkout: self
+        fetchDepth: 0
+      - template: ../steps/python/pythonBuild.yml
+        parameters:
+          workingDirectory: ${{ parameters.workingDirectory }}
+      - template: ../steps/test/testPython.yml
+        parameters:
+          workingDirectory: ${{ parameters.workingDirectory }}

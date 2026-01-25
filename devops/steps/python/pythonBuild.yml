@@ -1,0 +1,11 @@
+parameters:
+- name: workingDirectory
+  default: ''
+
+steps:
+- script: |
+    set -euo pipefail
+    python -m pip install --upgrade pip
+    pip install -r requirements.txt
+  displayName: 'Code Build'
+  workingDirectory: ${{ parameters.workingDirectory }}

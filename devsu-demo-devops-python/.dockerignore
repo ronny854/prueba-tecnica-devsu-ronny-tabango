@@ -1,0 +1,71 @@
+# Git
+.git
+.gitignore
+
+# Python
+__pycache__
+*.py[cod]
+*$py.class
+*.so
+.Python
+env/
+venv/
+.venv/
+ENV/
+.eggs/
+*.egg-info/
+*.egg
+.mypy_cache/
+.pytest_cache/
+.coverage
+htmlcov/
+.tox/
+.nox/
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+
+# Docker
+Dockerfile*
+docker-compose*
+.docker/
+
+# Base de datos local (se genera en el contenedor)
+db.sqlite3
+*.sqlite3
+
+# Archivos de entorno locales
+.env.local
+.env.*.local
+
+# Documentación
+*.md
+!README.md
+docs/
+
+# Tests coverage
+coverage/
+.coverage
+
+# Kubernetes manifests
+k8s/
+
+# Terraform
+terraform/
+*.tfstate
+*.tfstate.*
+
+# CI/CD
+.github/
+.gitlab-ci.yml
+azure-pipelines.yml
+
+# Misc
+*.log
+*.tmp
+.DS_Store
+Thumbs.db

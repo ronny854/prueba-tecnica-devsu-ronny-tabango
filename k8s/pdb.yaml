@@ -1,0 +1,16 @@
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: demo-devops-python-pdb
+  namespace: myapp
+  labels:
+    app: demo-devops-python
+    component: availability
+spec:
+  minAvailable: 1  # Mantener al menos 1 pod disponible durante disrupciones
+  selector:
+    matchLabels:
+      app: demo-devops-python
+  
+  # Alternativamente, puedes usar maxUnavailable en lugar de minAvailable:
+  # maxUnavailable: 1  # Permitir que máximo 1 pod esté no disponible

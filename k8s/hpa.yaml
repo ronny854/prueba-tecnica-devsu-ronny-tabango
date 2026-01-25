@@ -1,0 +1,59 @@
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: demo-devops-python-hpa
+  namespace: myapp
+  labels:
+    app: demo-devops-python
+    component: autoscaling
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: demo-devops-python
+  
+  # Número mínimo y máximo de réplicas
+  minReplicas: 2
+  maxReplicas: 5
+  
+  # Métricas para el escalado
+  metrics:
+  # Escalado basado en CPU
+  - type: Resource
+    resource:
+      name: cpu
+      target:
+        type: Utilization
+        averageUtilization: 70  # Escalar cuando CPU promedio > 70%
+  
+  # Escalado basado en memoria
+  - type: Resource
+    resource:
+      name: memory
+      target:
+        type: Utilization
+        averageUtilization: 80  # Escalar cuando memoria promedio > 80%
+  
+  # Comportamiento del escalado
+  behavior:
+    scaleDown:
+      stabilizationWindowSeconds: 300  # Esperar 5 min antes de escalar hacia abajo
+      policies:
+      - type: Percent
+        value: 50  # Reducir máximo 50% de pods por vez
+        periodSeconds: 60
+      - type: Pods
+        value: 1  # Reducir máximo 1 pod por vez
+        periodSeconds: 60
+      selectPolicy: Min  # Usar la política más conservadora
+    
+    scaleUp:
+      stabilizationWindowSeconds: 0  # Escalar hacia arriba inmediatamente
+      policies:
+      - type: Percent
+        value: 100  # Duplicar pods si es necesario
+        periodSeconds: 15
+      - type: Pods
+        value: 2  # Agregar máximo 2 pods por vez
+        periodSeconds: 15
+      selectPolicy: Max  # Usar la política más agresiva

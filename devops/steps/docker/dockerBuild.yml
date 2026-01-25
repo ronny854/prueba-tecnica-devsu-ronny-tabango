@@ -1,0 +1,26 @@
+parameters:
+- name: workingDirectory
+- name: dockerfilePath
+- name: imageRepository
+- name: tag
+- name: containerRegistry
+steps:
+- script: |
+    set -euo pipefail
+    echo "=== Building Docker Image ==="
+    
+    IMAGE_FULL="${{ parameters.containerRegistry }}/${{ parameters.imageRepository }}"
+    TAG="${{ parameters.tag }}"
+    
+    echo "Building: ${IMAGE_FULL}:${TAG}"
+    docker build \
+      -t "${IMAGE_FULL}:${TAG}" \
+      -f "${{ parameters.dockerfilePath }}" \
+      --label "build.id=$(Build.BuildId)" \
+      --label "build.branch=$(Build.SourceBranchName)" \
+      --label "build.commit=$(Build.SourceVersion)" \
+      "${{ parameters.workingDirectory }}"
+    
+    echo "✅ Build completado"
+    docker images | grep "${{ parameters.imageRepository }}"
+  displayName: 'Docker Build'

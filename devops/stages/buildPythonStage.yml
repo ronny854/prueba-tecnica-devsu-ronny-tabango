@@ -1,0 +1,43 @@
+parameters:
+  - name: imageRepository
+  - name: tag
+  - name: workingDirectory
+  - name: dockerfilePath
+  - name: containerRegistry
+  - name: buildImage
+  - name: dockerRegistryServiceConnection
+  # ==========================================
+  # PARÁMETROS SONARCLOUD/SONARQUBE
+  # ==========================================
+  - name: runSonarAnalysis
+  - name: sonarServiceConnection
+  - name: sonarProjectName
+  - name: sonarOrganization
+
+
+stages:
+  - stage: CI
+    displayName: 'CI'
+    jobs:
+      - template: ../jobs/jobBuildPython.yml
+        parameters:
+          workingDirectory: ${{ parameters.workingDirectory }}
+          buildImage: ${{ parameters.buildImage }}
+
+      - ${{ if eq(parameters.runSonarAnalysis, true) }}:
+        - template: ../jobs/jobSonarQubeAnalisys.yml
+          parameters:
+            workingDirectory: ${{ parameters.workingDirectory }}
+            sonarServiceConnection: ${{ parameters.sonarServiceConnection }}
+            sonarProjectName: ${{ parameters.sonarProjectName }}
+            sonarOrganization: ${{ parameters.sonarOrganization }}
+
+      - template: ../jobs/jobDockerBuildPush.yml
+        parameters:
+          workingDirectory: ${{ parameters.workingDirectory }}
+          dockerfilePath: ${{ parameters.dockerfilePath }}
+          imageRepository: ${{ parameters.imageRepository }}
+          tag: ${{ parameters.tag }}
+          containerRegistry: ${{ parameters.containerRegistry }}
+          dockerRegistryServiceConnection: ${{ parameters.dockerRegistryServiceConnection }}
+          runSonarAnalysis: ${{ parameters.runSonarAnalysis }}

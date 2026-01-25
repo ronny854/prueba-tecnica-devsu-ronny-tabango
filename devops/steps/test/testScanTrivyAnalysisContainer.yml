@@ -1,0 +1,13 @@
+parameters:
+- name: imageRepository
+- name: tag
+- name: containerRegistry
+
+steps:
+- script: |
+    set -euo pipefail
+    echo "=== Scanning Docker Image for Vulnerabilities ==="
+    docker run --rm -v /var/run/docker.sock:/var/run/docker.sock \
+      aquasec/trivy:latest image --severity HIGH,CRITICAL \
+      ${{ parameters.containerRegistry }}/${{ parameters.imageRepository }}:${{ parameters.tag }} || true
+  displayName: 'Docker Image Vulnerability Scan - Trivy'

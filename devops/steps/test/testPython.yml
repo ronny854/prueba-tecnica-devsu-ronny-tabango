@@ -1,0 +1,49 @@
+parameters:
+- name: workingDirectory
+  default: ''
+
+steps:
+- script: |
+    set -euo pipefail
+    mkdir -p "$(Build.ArtifactStagingDirectory)/reports"
+    echo "=== Running Flake8 (critical errors) ==="
+
+    flake8 . --count --select=E9,F63,F7,F82 --show-source --statistics | tee "$(Build.ArtifactStagingDirectory)/reports/flake8-critical.txt" || true
+
+    echo "=== Running Flake8 (style, non-blocking) ==="
+    flake8 . --count --exit-zero --max-complexity=10 --max-line-length=127 --statistics | tee "$(Build.ArtifactStagingDirectory)/reports/flake8-style.txt"
+  displayName: 'Lint - Code Style & Static Analysis (Flake8)'
+  workingDirectory: ${{ parameters.workingDirectory }}
+
+- script: |
+    set -euo pipefail
+    mkdir -p "$(Build.ArtifactStagingDirectory)/reports"
+    echo "=== Running Bandit (Security Linter) ==="
+    bandit -r api/ demo/ -f json -o "$(Build.ArtifactStagingDirectory)/reports/bandit-report.json" || true
+    bandit -r api/ demo/ -f txt | tee "$(Build.ArtifactStagingDirectory)/reports/bandit-report.txt" || true
+  displayName: 'Security - Static Analysis (Bandit)'
+  workingDirectory: ${{ parameters.workingDirectory }}
+
+- script: |
+    set -euo pipefail
+    mkdir -p "$(Build.ArtifactStagingDirectory)/reports"
+    echo "=== Running Tests with Coverage ==="
+    coverage run --source='.' manage.py test --verbosity=2
+    coverage report -m
+    coverage xml -o "$(Build.ArtifactStagingDirectory)/reports/coverage.xml"
+    coverage html -d "$(Build.ArtifactStagingDirectory)/reports/htmlcov"
+  displayName: 'Test - Unit Tests & Coverage'
+  workingDirectory: ${{ parameters.workingDirectory }}
+
+- task: PublishCodeCoverageResults@2
+  displayName: 'Publish Coverage Results'
+  inputs:
+    summaryFileLocation: '$(Build.ArtifactStagingDirectory)/reports/coverage.xml'
+    pathToSources: '${{ parameters.workingDirectory }}'
+
+- task: PublishBuildArtifacts@1
+  displayName: 'Publish Analysis Reports'
+  inputs:
+    pathToPublish: '$(Build.ArtifactStagingDirectory)/reports'
+    artifactName: 'analysis-reports'
+  condition: always()

@@ -1,0 +1,61 @@
+parameters:
+- name: workingDirectory
+- name: dockerfilePath
+- name: imageRepository
+- name: tag
+- name: containerRegistry
+- name: dockerRegistryServiceConnection
+- name: runSonarAnalysis
+jobs:
+  - job: DockerBuildPush
+    displayName: 'Build & Push Docker Image'
+    dependsOn: 
+      - BuildAndTest
+      - ${{ if eq(parameters.runSonarAnalysis, true) }}:
+        - SonarCloudAnalysis
+    condition: and(
+      succeeded(),
+      ne(variables['Build.Reason'], 'PullRequest'),
+      or(
+        eq(variables['Build.SourceBranch'], 'refs/heads/main'),
+        eq(variables['Build.SourceBranch'], 'refs/heads/develop')
+        )
+      )
+    pool:
+      vmImage: 'ubuntu-latest'
+    steps:
+      - checkout: self
+
+      - task: Docker@2
+        displayName: 'Docker Login'
+        inputs:
+          containerRegistry: '${{ parameters.dockerRegistryServiceConnection }}'
+          command: 'login'
+
+      - template: ../steps/docker/dockerBuild.yml
+        parameters:
+          workingDirectory: ${{ parameters.workingDirectory }}
+          dockerfilePath: ${{ parameters.dockerfilePath }}
+          imageRepository: ${{ parameters.imageRepository }}
+          tag: ${{ parameters.tag }}
+          containerRegistry: ${{ parameters.containerRegistry }}
+
+      - template: ../steps/test/testScanTrivyAnalysisContainer.yml
+        parameters:
+          imageRepository: ${{ parameters.imageRepository }}
+          tag: ${{ parameters.tag }}
+          containerRegistry: ${{ parameters.containerRegistry }}
+
+      - template: ../steps/docker/dockerPush.yml
+        parameters:
+          imageRepository: ${{ parameters.imageRepository }}
+          tag: ${{ parameters.tag }}
+          containerRegistry: ${{ parameters.containerRegistry }}
+
+      - script: |
+          echo "=== Docker Logout & Cleanup ==="
+          docker logout ${{ parameters.containerRegistry }} || true
+          docker image prune -f || true
+          echo "✅ Limpieza completada"
+        displayName: 'Docker Cleanup'
+        condition: always()

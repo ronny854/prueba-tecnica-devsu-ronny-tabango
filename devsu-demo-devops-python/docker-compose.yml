@@ -1,0 +1,30 @@
+version: '3.8'
+
+services:
+  # Servicio principal de la aplicación
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: demo-devops-python
+    ports:
+      - "8000:8000"
+    environment:
+      - DJANGO_SECRET_KEY=django-insecure-dev-key-change-in-production
+      - DEBUG=True
+      - ALLOWED_HOSTS=localhost,127.0.0.1,0.0.0.0
+      - DATABASE_NAME=db.sqlite3
+    volumes:
+      # Persistir la base de datos SQLite
+      - sqlite_data:/app/data
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/api/"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+    restart: unless-stopped
+
+volumes:
+  sqlite_data:
+    driver: local

@@ -1,0 +1,63 @@
+parameters:
+  - name: projectname
+    type: string
+    default: 'devsu-demo-devops-python'
+    displayName: 'Nombre del proyecto/repo'
+  - name: imageRepository
+    type: string
+    default: 'ronnyt854/demo-devops-python'
+    displayName: 'Nombre del repositorio de imagen Docker'
+  
+  # ==========================================
+  # PARÁMETROS SONARCLOUD
+  # ==========================================
+  - name: runSonarAnalysis
+    type: boolean
+    default: false
+    displayName: 'Ejecutar análisis de SonarCloud'
+  - name: sonarProjectName
+    type: string
+    default: 'prueba-tecnica-devsu-ronny-tabango'
+    displayName: 'Nombre del proyecto en SonarCloud'
+  - name: sonarOrganization
+    type: string
+    default: 'ronny854'
+    displayName: 'SonarCloud Organization (ej: tu-org-sonarcloud)'
+
+trigger:
+  branches:
+    include:
+      - main
+      - develop
+  paths:
+    include:
+      - devsu-demo-devops-python/**
+
+variables:
+  containerRegistry: 'docker.io'
+  workingDirectory: '$(Build.SourcesDirectory)/${{ parameters.projectname }}'
+  dockerfilePath: '$(Build.SourcesDirectory)/${{ parameters.projectname }}/Dockerfile'
+  buildImage: 'ronnyt854/python311_build:v1.1'
+  # SonarCloud Service Connection (crear en Azure DevOps Project Settings)
+  sonarServiceConnection: 'conection-sonarqube-github-account'
+  # Docker Registry Service Connection
+  dockerRegistryServiceConnection: 'dockerRegistryServiceConnection'
+
+stages:
+- template: stages/buildPythonStage.yml
+  parameters:
+    imageRepository: '${{ parameters.imageRepository }}'
+    tag: '$(Build.BuildId)'
+    workingDirectory: '$(workingDirectory)'
+    dockerfilePath: '$(dockerfilePath)'
+    containerRegistry: '$(containerRegistry)'
+    buildImage: '$(buildImage)'
+    # Docker Registry Service Connection
+    dockerRegistryServiceConnection: '$(dockerRegistryServiceConnection)'
+    # SonarCloud parameters
+    runSonarAnalysis: ${{ parameters.runSonarAnalysis }}
+    sonarServiceConnection: '$(sonarServiceConnection)'
+    sonarProjectName: '${{ parameters.sonarProjectName }}'
+    sonarOrganization: '${{ parameters.sonarOrganization }}'
+
+- template: stages/kubernetesDeploy.yml

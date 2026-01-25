@@ -1,0 +1,17 @@
+# Stage para validar acceso a minikube y Docker
+stages:
+  - stage: CD
+    displayName: "CD - Minikube Deploy"
+    dependsOn: [CI]
+    jobs:
+      - job: DeployAppMinikube
+        displayName: "Deploy App"
+        pool:
+          name: minikube-agents
+        variables:
+        - group: MINIKUBE-VARS
+        - name: IMAGE_FULL_TAG
+          value: $[stageDependencies.CI.DockerBuildPush.outputs['PushImageStep.IMAGE_FULL_TAG']]
+        steps:
+          - template: ../steps/minikube/minikubeValidate.yml
+          - template: ../steps/minikube/minikubeDeploy.yml

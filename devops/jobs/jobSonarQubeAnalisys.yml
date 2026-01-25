@@ -1,0 +1,21 @@
+parameters:
+- name: workingDirectory
+- name: sonarServiceConnection
+- name: sonarProjectName
+- name: sonarOrganization
+
+jobs:
+  - job: SonarCloudAnalysis
+    displayName: 'SonarCloud Analysis'
+    dependsOn: BuildAndTest
+    condition: succeeded()
+    pool:
+      vmImage: 'ubuntu-latest'
+    # NO usar container - ubuntu-latest ya tiene Java
+    steps:
+      - template: ../steps/sonarqube/sonarQubeAnalisysPython.yml
+        parameters:
+          workingDirectory: ${{ parameters.workingDirectory }}
+          sonarServiceConnection: ${{ parameters.sonarServiceConnection }}
+          sonarProjectName: ${{ parameters.sonarProjectName }}
+          sonarOrganization: ${{ parameters.sonarOrganization }}
