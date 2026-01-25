@@ -15,16 +15,17 @@ stages:
     displayName: 'CI'
     dependsOn: []
     variables:
+      - group: MINIKUBE-VARS
       - name: workingDirectory
         value: '$(Build.SourcesDirectory)/${{ parameters.projectname }}'
       - name: buildImage
         value: 'ronnyt854/python311_build:v1.1'
       - name: containerRegistry
         value: 'docker.io'
-      - name: dockerRegistryServiceConnection
-        value: 'dockerRegistryServiceConnection'
-      - name: sonarServiceConnection
-        value: 'conection-sonarqube-github-account'
+      # - name: dockerRegistryServiceConnection
+      #   value: 'dockerRegistryServiceConnection'
+      # - name: sonarServiceConnection
+      #   value: 'conection-sonarqube-github-account'
 
     jobs:
       - template: ../jobs/jobBuildPython.yml
@@ -36,7 +37,7 @@ stages:
         - template: ../jobs/jobSonarQubeAnalisys.yml
           parameters:
             workingDirectory: $(workingDirectory)
-            sonarServiceConnection: $(sonarServiceConnection)
+            # sonarServiceConnection: $(sonarServiceConnection)
             sonarProjectName: ${{ parameters.sonarProjectName }}
             sonarOrganization: ${{ parameters.sonarOrganization }}
 
@@ -47,5 +48,5 @@ stages:
           imageRepository: ${{ parameters.imageRepository }}
           tag: ${{ parameters.tag }}
           containerRegistry: $(containerRegistry)
-          dockerRegistryServiceConnection: $(dockerRegistryServiceConnection)
+          # dockerRegistryServiceConnection: $(dockerRegistryServiceConnection)
           runSonarAnalysis: ${{ parameters.runSonarAnalysis }}

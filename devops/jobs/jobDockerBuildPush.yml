@@ -29,7 +29,7 @@ jobs:
       - task: Docker@2
         displayName: 'Docker Login'
         inputs:
-          containerRegistry: '${{ parameters.dockerRegistryServiceConnection }}'
+          containerRegistry: '$(dockerRegistryServiceConnection)'
           command: 'login'
 
       - template: ../steps/docker/dockerBuild.yml
