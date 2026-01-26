@@ -17,6 +17,8 @@ Implementación completa de CI/CD con Azure DevOps, Dockerización optimizada y 
   - [Estructura del Proyecto](#-estructura-del-proyecto)
   - [Pipeline CI/CD](#-pipeline-cicd)
     - [Funcionamiento del Pipeline](#funcionamiento-del-pipeline)
+    - [Flujo del Pipeline](#flujo-del-pipeline)
+    - [Tareas del Pipeline](#tareas-del-pipeline)
   - [Manifiestos de Kubernetes](#-manifiestos-de-kubernetes)
   - [Diagrama de Recursos K8s](#diagrama-de-recursos-k8s)
 - [Requisitos Previos](#-requisitos-previos)
@@ -28,12 +30,20 @@ Implementación completa de CI/CD con Azure DevOps, Dockerización optimizada y 
 - [Configuración de Azure DevOps](#️-configuración-de-azure-devops)
   - [Service Connections](#service-connections)
   - [Variable Groups](#variable-groups)
+- [Container de Build Especializado](#-container-de-build-especializado)
 - [Cómo Usar](#-cómo-usar)
-- [Endpoints de la API](#-endpoints-de-la-api)
+  - [Despliegue Automático (CI/CD)](#despliegue-automático-cicd)
+  - [Acceso a la Aplicación](#acceso-a-la-aplicación)
 - [Evidencias de Ejecución](#-evidencias-de-ejecución)
   - [Logs del Pipeline en Azure DevOps](#logs-del-pipeline-en-azure-devops)
   - [Pruebas de la Aplicación Desplegada en Minikube](#pruebas-de-la-aplicación-desplegada-en-minikube)
 - [Troubleshooting](#-troubleshooting)
+- [Monitoreo y Métricas](#-monitoreo-y-métricas)
+- [Seguridad](#-seguridad)
+- [Tecnologías Utilizadas](#️-tecnologías-utilizadas)
+- [Autor](#-autor)
+- [Licencia](#-licencia)
+- [Referencias y Documentación](#-referencias-y-documentación)
 
 ---
 
@@ -145,6 +155,15 @@ trigger:
   paths:
     include:
       - devsu-demo-devops-python/**  # Solo cambios en la app
+
+pr:
+  branches:
+    include:
+      - main
+      - develop
+  paths:
+    include:
+      - devsu-demo-devops-python/**
 ```
 
 > ℹ️ **Nota:** El pipeline solo se activa cuando hay cambios en el directorio `devsu-demo-devops-python/`. Cambios en documentación, scripts o manifiestos K8s no activan el pipeline automáticamente.
@@ -157,7 +176,7 @@ El pipeline acepta parámetros que pueden modificarse al ejecutarlo manualmente:
 |-----------|-------------------|-------------|
 | `projectname` | `devsu-demo-devops-python` | Nombre del directorio del proyecto |
 | `imageRepository` | `ronnyt854/demo-devops-python` | Repositorio de imagen en Docker Hub |
-| `runSonarAnalysis` | `false` | Habilitar/deshabilitar análisis SonarCloud |
+| `runSonarAnalysis` | `true` | Habilitar/deshabilitar análisis SonarCloud |
 | `sonarProjectName` | `prueba-tecnica-devsu-ronny-tabango` | Nombre del proyecto en SonarCloud |
 | `sonarOrganization` | `ronny854` | Organización en SonarCloud |
 
@@ -397,6 +416,22 @@ O desde la interfaz gráfica de VirtualBox:
 4. CIDR IPv4: `10.0.2.0/24`
 
 ![alt text](capturasdepantalla/redNat.png)
+
+**Configurar Reenvío de Puertos (Port Forwarding):**
+
+Para poder acceder a la aplicación desde la máquina host, es necesario configurar el reenvío de puertos en la red NAT:
+
+1. Seleccionar la red NAT `NatNetwork`
+2. Click en "Reenvío de puertos" o "Port Forwarding"
+3. Agregar las siguientes reglas:
+
+| Nombre | Protocolo | IP Host | Puerto Host | IP Invitado | Puerto Invitado |
+|--------|-----------|---------|-------------|-------------|-----------------|
+| `k8s-nodeport` | TCP | 127.0.0.1 | 30800 | 10.0.2.3 | 30800 |
+
+> ℹ️ **Nota:** El puerto `30800` permite acceder a la aplicación Django desde `http://localhost:30800/api/` en la máquina host después de ejecutar el port-forward en Minikube.
+
+![alt text](capturasdepantalla/reenviodePuertos.png)
 
 #### 1.2 Crear VM: Minikube Server
 
@@ -948,72 +983,6 @@ http://prueba.devsu.demopython.ronnytabango.com/api/
 
 ---
 
-## 📡 Endpoints de la API
-
-La aplicación Django REST expone los siguientes endpoints:
-
-### Health Check
-```bash
-GET /api/
-Response: {"status": "ok", "message": "API is running"}
-```
-
-### Users CRUD
-
-**Listar Usuarios**
-```bash
-GET /api/users/
-Response: [
-  {
-    "id": 1,
-    "username": "admin",
-    "email": "admin@example.com"
-  }
-]
-```
-
-**Crear Usuario**
-```bash
-POST /api/users/
-Body: {
-  "username": "nuevo_usuario",
-  "email": "nuevo@example.com",
-  "password": "password123"
-}
-Response: {
-  "id": 2,
-  "username": "nuevo_usuario",
-  "email": "nuevo@example.com"
-}
-```
-
-**Obtener Usuario**
-```bash
-GET /api/users/{id}/
-Response: {
-  "id": 1,
-  "username": "admin",
-  "email": "admin@example.com"
-}
-```
-
-**Actualizar Usuario**
-```bash
-PUT /api/users/{id}/
-Body: {
-  "username": "admin_updated",
-  "email": "admin@example.com"
-}
-```
-
-**Eliminar Usuario**
-```bash
-DELETE /api/users/{id}/
-Response: 204 No Content
-```
-
----
-
 ## 📸 Evidencias de Ejecución
 
 ### Logs del Pipeline en Azure DevOps
@@ -1022,7 +991,7 @@ A continuación se muestran las capturas de pantalla de la ejecución exitosa de
 
 #### Ejecución Completa del Pipeline
 
-**[INSERTE_IMAGEN_AQUI: pipeline-execution-complete.png]**
+![alt text](capturasdepantalla/logsEvidencias/ejecucionpipeline.png)
 
 #### Stage CI - Build and Test Python App
 
@@ -1030,10 +999,10 @@ A continuación se muestran las capturas de pantalla de la ejecución exitosa de
 
 | Tarea | Captura |
 |-------|---------|
-| Code Build | **[INSERTE_IMAGEN_AQUI: log-code-build.png]** |
-| Lint - Flake8 | **[INSERTE_IMAGEN_AQUI: log-flake8.png]** |
-| Security - Bandit | **[INSERTE_IMAGEN_AQUI: log-bandit.png]** |
-| Unit Tests & Coverage | **[INSERTE_IMAGEN_AQUI: log-tests-coverage.png]** |
+| Code Build | ![alt text](capturasdepantalla/logsEvidencias/codeBuild.png) |
+| Lint - Flake8 | ![alt text](capturasdepantalla/logsEvidencias/flake8.png) |
+| Security - Bandit | ![alt text](capturasdepantalla/logsEvidencias/bandit.png) |
+| Unit Tests & Coverage | ![alt text](capturasdepantalla/logsEvidencias/unitTest.png) |
 
 #### Stage CI - SonarCloud Analysis (Opcional)
 
@@ -1041,9 +1010,10 @@ A continuación se muestran las capturas de pantalla de la ejecución exitosa de
 
 | Tarea | Captura |
 |-------|---------|
-| SonarCloud Prepare | **[INSERTE_IMAGEN_AQUI: log-sonar-prepare.png]** |
-| SonarCloud Run Analysis | **[INSERTE_IMAGEN_AQUI: log-sonar-analysis.png]** |
-| Quality Gate Result | **[INSERTE_IMAGEN_AQUI: log-sonar-quality-gate.png]** |
+| SonarCloud Prepare | ![!\[alt text\](image.png)](capturasdepantalla/logsEvidencias/sonarPrepare.png) |
+| SonarCloud Run Analysis | ![alt text](capturasdepantalla/logsEvidencias/sonarRun.png) |
+| Quality Gate Result | ![!\[alt text\](image.png)](capturasdepantalla/logsEvidencias/sonarPublish.png) |
+| Sonar Dashboard | ![alt text](capturasdepantalla/logsEvidencias/sonarDashboard.png) |
 
 #### Stage CI - Docker Build & Push
 
@@ -1051,10 +1021,10 @@ A continuación se muestran las capturas de pantalla de la ejecución exitosa de
 
 | Tarea | Captura |
 |-------|---------|
-| Docker Login | **[INSERTE_IMAGEN_AQUI: log-docker-login.png]** |
-| Docker Build | **[INSERTE_IMAGEN_AQUI: log-docker-build.png]** |
-| Trivy Security Scan | **[INSERTE_IMAGEN_AQUI: log-trivy-scan.png]** |
-| Docker Push | **[INSERTE_IMAGEN_AQUI: log-docker-push.png]** |
+| Docker Login | ![alt text](capturasdepantalla/logsEvidencias/dockerLogin.png) |
+| Docker Build | ![!\[alt text\](image.png)](capturasdepantalla/logsEvidencias/dockerBuild.png) |
+| Trivy Security Scan | ![alt text](capturasdepantalla/logsEvidencias/dockerTrivy.png) |
+| Docker Push | ![alt text](capturasdepantalla/logsEvidencias/dockerPush.png) |
 
 #### Stage CD - Minikube Deploy
 
@@ -1062,8 +1032,8 @@ A continuación se muestran las capturas de pantalla de la ejecución exitosa de
 
 | Tarea | Captura |
 |-------|---------|
-| Minikube Validate | **[INSERTE_IMAGEN_AQUI: log-minikube-validate.png]** |
-| Deploy App in Minikube | **[INSERTE_IMAGEN_AQUI: log-minikube-deploy.png]** |
+| Status Minikube | ![alt text](capturasdepantalla/logsEvidencias/minikubeStatus.png) |
+| Deploy App in Minikube | ![!\[alt text\](image.png)](capturasdepantalla/logsEvidencias/minikubeDeploy1.png) ![alt text](capturasdepantalla/logsEvidencias/minikubeDeploy2.png) |
 
 ---
 
@@ -1076,83 +1046,44 @@ A continuación se muestran las capturas de pantalla de la ejecución exitosa de
 kubectl get pods -n myapp
 ```
 
-**[INSERTE_IMAGEN_AQUI: kubectl-get-pods.png]**
+![alt text](capturasdepantalla/logsEvidencias/getPods.png)
 
 ```bash
 # Verificar servicios
 kubectl get svc -n myapp
 ```
 
-**[INSERTE_IMAGEN_AQUI: kubectl-get-services.png]**
+![alt text](capturasdepantalla/logsEvidencias/getServices.png)
 
 ```bash
 # Verificar ingress
 kubectl get ingress -n myapp
 ```
 
-**[INSERTE_IMAGEN_AQUI: kubectl-get-ingress.png]**
+![alt text](capturasdepantalla/logsEvidencias/ingress.png)
 
 ```bash
 # Verificar todos los recursos del namespace
 kubectl get all -n myapp
 ```
 
-**[INSERTE_IMAGEN_AQUI: kubectl-get-all.png]**
+![alt text](capturasdepantalla/logsEvidencias/allresourceApp.png)
 
-#### Pruebas de los Endpoints de la API
-
-**Health Check - GET /api/**
-
-```bash
-curl http://10.0.2.3:30800/api/
-```
-
-**[INSERTE_IMAGEN_AQUI: test-api-health.png]**
-
-**Listar Usuarios - GET /api/users/**
-
-```bash
-curl http://10.0.2.3:30800/api/users/
-```
-
-**[INSERTE_IMAGEN_AQUI: test-api-list-users.png]**
-
-**Crear Usuario - POST /api/users/**
-
-```bash
-curl -X POST http://10.0.2.3:30800/api/users/ \
-  -H "Content-Type: application/json" \
-  -d '{"username": "test_user", "email": "test@example.com"}'
-```
-
-**[INSERTE_IMAGEN_AQUI: test-api-create-user.png]**
-
-**Obtener Usuario - GET /api/users/{id}/**
-
-```bash
-curl http://10.0.2.3:30800/api/users/1/
-```
-
-**[INSERTE_IMAGEN_AQUI: test-api-get-user.png]**
-
-#### Acceso desde Navegador
+#### Acceso desde Ingress en Maquina Virtual
 
 **Interfaz de Django REST Framework**
 
-**[INSERTE_IMAGEN_AQUI: browser-api-root.png]**
+![alt text](capturasdepantalla/logsEvidencias/accesoNavegador.png)
 
 **Listado de Usuarios en el Navegador**
 
-**[INSERTE_IMAGEN_AQUI: browser-users-list.png]**
+![alt text](capturasdepantalla/logsEvidencias/getUser.png)
 
-#### Logs de la Aplicación
+#### Acceso desde NodePort Maquina Host
 
-```bash
-# Ver logs de los pods
-kubectl logs -l app=demo-devops-python -n myapp --tail=50
-```
+**Interfaz de Django REST Framework**
 
-**[INSERTE_IMAGEN_AQUI: kubectl-logs-app.png]**
+![alt text](capturasdepantalla/logsEvidencias/maquinaHost.png)
 
 #### Métricas y Estado del HPA
 
@@ -1164,7 +1095,11 @@ kubectl get hpa -n myapp
 kubectl top pods -n myapp
 ```
 
-**[INSERTE_IMAGEN_AQUI: kubectl-hpa-metrics.png]**
+![alt text](capturasdepantalla/logsEvidencias/metricas.png)
+
+#### Applicacion desde el minikube dashboard
+
+![alt text](capturasdepantalla/logsEvidencias/appDashboard.png)
 
 ---
 
@@ -1360,8 +1295,8 @@ Para producción real:
 **Ronny Tabango**
 
 - GitHub: [@ronny854](https://github.com/ronny854)
-- LinkedIn: [Ronny Tabango](https://linkedin.com/in/ronny-tabango)
-- Email: ronny.tabango@example.com
+- LinkedIn: [Ronny Tabango](www.linkedin.com/in/ronny-alexander-tabango-clavijo-6a1808226)
+- Email: ronnytabango854@gmail.com
 
 ---
 
