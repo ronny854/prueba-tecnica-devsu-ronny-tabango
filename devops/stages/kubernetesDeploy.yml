@@ -3,6 +3,7 @@ stages:
   - stage: CD
     displayName: "CD - Minikube Deploy"
     dependsOn: [CI]
+    condition: and(succeeded(), ne(variables['Build.Reason'], 'PullRequest'))
     jobs:
       - job: DeployAppMinikube
         displayName: "Deploy App"

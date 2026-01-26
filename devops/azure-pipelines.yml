@@ -32,6 +32,14 @@ trigger:
   paths:
     include:
       - devsu-demo-devops-python/**
+pr:
+  branches:
+    include:
+      - main
+      - develop
+  paths:
+    include:
+      - devsu-demo-devops-python/**
 
 variables:
   containerRegistry: 'docker.io'
