@@ -11,6 +11,3 @@ spec:
   selector:
     matchLabels:
       app: demo-devops-python
-  
-  # Alternativamente, puedes usar maxUnavailable en lugar de minAvailable:
-  # maxUnavailable: 1  # Permitir que máximo 1 pod esté no disponible
